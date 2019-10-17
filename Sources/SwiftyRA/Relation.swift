@@ -1,7 +1,7 @@
 public struct Relation {
     private enum State {
         case resolved(Header, Tuples)
-        case unresolved(Header, Tuples, Expression)
+        case unresolved(Header, Tuples, Query)
     }
 
     public var header: Header { resolvingState().header }
@@ -9,9 +9,9 @@ public struct Relation {
 
     private var state: Reference<State>
 
-    private var expression: Expression? {
-        guard case let .unresolved(_, _, e) = state.value else { return nil }
-        return e
+    private var query: Query? {
+        guard case let .unresolved(_, _, q) = state.value else { return nil }
+        return q
     }
 
     public init(header: [(name: AttributeName, type: AttributeType)], tuples: [[Value]]) throws {
@@ -34,9 +34,9 @@ public struct Relation {
         state = Reference(.resolved(header, tuples))
     }
 
-    private init(header: Header, tuples: Tuples, expression: Expression? = nil) {
-        if let expression = expression {
-            state = Reference(.unresolved(header, tuples, expression))
+    private init(header: Header, tuples: Tuples, query: Query? = nil) {
+        if let query = query {
+            state = Reference(.unresolved(header, tuples, query))
         } else {
             state = Reference(.resolved(header, tuples))
         }
@@ -47,7 +47,7 @@ public struct Relation {
         case let .resolved(h, ts):
             return (h, ts)
         case let .unresolved(h, ts, e):
-            // resolve expression with h and ts to get newH and newTs
+            // resolve query with h and ts to get newH and newTs
             let (newH, newTs) = (h, ts)
             state.value = .resolved(newH, newTs)
             return (newH, newTs)
@@ -57,6 +57,6 @@ public struct Relation {
 
 public extension Relation {
      func project(_ attributes: [AttributeName]) -> Relation {
-         Relation(header: header, tuples: tuples, expression: .projection(attributes, expression ?? .relation(self)))
+         Relation(header: header, tuples: tuples, query: .projection(attributes, query ?? .relation(self)))
      }
 }
