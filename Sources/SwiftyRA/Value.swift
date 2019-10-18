@@ -9,10 +9,6 @@ public enum Value: Equatable {
 }
 
 public extension Value {
-    var hasValue: Bool {
-        self != .none
-    }
-
     func isMatching(type: AttributeType) -> Bool {
         switch (type, self) {
         case (.required(.boolean), .boolean),
@@ -38,3 +34,29 @@ extension Value: ExpressibleByStringLiteral  { public init(stringLiteral value: 
 extension Value: ExpressibleByIntegerLiteral { public init(integerLiteral value: Int)   { self = .integer(value) } }
 extension Value: ExpressibleByFloatLiteral   { public init(floatLiteral value: Float)   { self = .float(value)   } }
 extension Value: ExpressibleByNilLiteral     { public init(nilLiteral: ())              { self = .none           } }
+
+public extension Value {
+    var hasValue: Bool {
+        self != .none
+    }
+
+    var boolean: Bool? {
+        guard case let .boolean(value) = self else { return nil }
+        return value
+    }
+
+    var string: String? {
+        guard case let .string(value) = self else { return nil }
+        return value
+    }
+
+    var integer: Int? {
+        guard case let .integer(value) = self else { return nil }
+        return value
+    }
+
+    var float: Float? {
+        guard case let .float(value) = self else { return nil }
+        return value
+    }
+}

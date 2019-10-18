@@ -3,6 +3,8 @@ public final class QueryProcessor {
         switch query {
         case let .projection(attrs, q):
             return try project(attributes: attrs, r: try execute(query: q))
+        case let .selection(predicate, q):
+            return try select(where: predicate, r: try execute(query: q))
         case let .relation(r):
             return r
         }
@@ -21,5 +23,9 @@ public final class QueryProcessor {
             })
         }
         return Relation(header: header, tuples: tuples)
+    }
+
+    private func select(where predicate: (Tuple) -> Bool, r: Relation) throws -> Relation {
+        return Relation(header: r.header, tuples: r.tuples.filter(predicate))
     }
 }
