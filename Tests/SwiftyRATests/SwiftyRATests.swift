@@ -32,8 +32,24 @@ final class SwiftyRATests: XCTestCase {
         print(s.tuples)
     }
 
+    func testRenaming() {
+        let r = try! Relation(
+            header: [("id", .required(.integer)), ("name", .required(.string)), ("age", .required(.integer)), ("hobby", .optional(.string))],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
+        let q = Query.rename("id", "identifier", .relation(r))
+        let s = try! QueryProcessor().execute(query: q)
+
+        print(s.tuples)
+    }
+
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
+        ("testRenaming",  testRenaming)
     ]
 }

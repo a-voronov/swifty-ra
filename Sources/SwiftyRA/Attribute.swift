@@ -13,6 +13,11 @@ public enum AttributeType {
 public typealias AttributeName = String
 
 public struct Attribute {
-    let name: AttributeName
-    let type: AttributeType
+    public let name: AttributeName
+    public let type: AttributeType
+
+    public init(name: AttributeName, type: AttributeType) {
+        self.name = name
+        self.type = type
+    }
 }

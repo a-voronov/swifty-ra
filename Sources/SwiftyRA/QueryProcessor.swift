@@ -5,6 +5,8 @@ public final class QueryProcessor {
             return try project(attributes: attrs, r: try execute(query: q))
         case let .selection(predicate, q):
             return try select(where: predicate, r: try execute(query: q))
+        case let .rename(from, to, q):
+            return try rename(from: from, to: to, r: try execute(query: q))
         case let .relation(r):
             return r
         }
@@ -27,5 +29,22 @@ public final class QueryProcessor {
 
     private func select(where predicate: (Tuple) -> Bool, r: Relation) throws -> Relation {
         return Relation(header: r.header, tuples: r.tuples.filter(predicate))
+    }
+
+    private func rename(from: AttributeName, to: AttributeName, r: Relation) throws -> Relation {
+        guard r.header[from] != nil else {
+            throw Errors.wrongAttribute(from)
+        }
+        let header = try Header(attributes: r.header.attributes.map { attribute in
+            attribute.name == from
+                ? Attribute(name: to, type: attribute.type)
+                : attribute
+        })
+        let tuples = r.tuples.map { tuple -> Tuple in
+            var values = tuple.values
+            values[to] = values.removeValue(forKey: from) ?? Value.none
+            return Tuple(values: values)
+        }
+        return Relation(header: header, tuples: tuples)
     }
 }
