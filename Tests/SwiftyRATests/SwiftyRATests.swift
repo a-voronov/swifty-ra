@@ -3,10 +3,18 @@ import XCTest
 
 final class SwiftyRATests: XCTestCase {
     func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertNil(nil)
+        let r = try! Relation(
+            header: [("id", .required(.integer)), ("name", .required(.string)), ("age", .required(.integer)), ("hobby", .optional(.string))],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
+        let q = Query.projection(["id", "name"], .projection(["id", "name", "hobby"], .relation(r)))
+        let s = try! QueryProcessor().execute(query: q)
+
+        print(s.tuples)
     }
 
     static var allTests = [

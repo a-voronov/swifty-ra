@@ -6,7 +6,11 @@ public struct Header {
         return names.map { attributesByName[$0]! }
     }
 
-    public init(_ attributes: [(name: AttributeName, type: AttributeType)]) throws {
+    init(attributes: [Attribute]) throws {
+        try self.init(attributes.map { attribute in (attribute.name, attribute.type) })
+    }
+
+    init(_ attributes: [(name: AttributeName, type: AttributeType)]) throws {
         var names: [AttributeName] = []
         var attributesByName: [AttributeName: Attribute] = [:]
 
@@ -22,22 +26,7 @@ public struct Header {
         self.attributesByName = attributesByName
     }
 
-//    init(attributes: [Attribute]) throws {
-//        try self.init(attributes.map { attribute in (attribute.name, attribute.type) })
-//    }
-
     public subscript(name: AttributeName) -> Attribute? {
         attributesByName[name]
     }
 }
-
-//extension Header {
-//    func project(_ attributes: [AttributeName]) throws -> Header {
-//        try Header(attributes: try attributes.map { attributeName in
-//            guard let attribute = self[attributeName] else {
-//                throw Errors.wrongAttribute(attributeName)
-//            }
-//            return attribute
-//        })
-//    }
-//}
