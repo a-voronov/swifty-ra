@@ -60,3 +60,25 @@ public extension Value {
         return value
     }
 }
+
+extension Value {
+    public static func < (lhs: Value, rhs: Value) throws -> Bool {
+        switch (lhs, rhs) {
+        case let (.string(l),  .string(r)):  return l < r
+        case let (.integer(l), .integer(r)): return l < r
+        case let (.float(l),   .float(r)):   return l < r
+
+        // if values are equal, result is false, otherwise true is always greater than false
+        case (.boolean(true),  .boolean(false)): return false
+        case (.boolean(false), .boolean(true)):  return true
+        case (.boolean,        .boolean):        return false
+
+        // if values are equal, result is false, otherwise non-null value is always greater than none
+        case (.none, .none): return false
+        case (_,     .none): return false
+        case (.none, _):     return true
+
+        default: throw Errors.incompatibleValues(lhs, rhs)
+        }
+    }
+}

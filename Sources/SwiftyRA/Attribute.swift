@@ -5,14 +5,14 @@ public enum ValueType: Equatable {
     case float
 }
 
-public enum AttributeType {
+public enum AttributeType: Equatable {
     case required(ValueType)
     case optional(ValueType)
 }
 
 public typealias AttributeName = String
 
-public struct Attribute {
+public struct Attribute: Equatable {
     public let name: AttributeName
     public let type: AttributeType
 
