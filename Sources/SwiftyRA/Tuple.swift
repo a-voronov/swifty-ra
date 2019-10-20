@@ -1,5 +1,6 @@
 public typealias Tuples = [Tuple]
 
+@dynamicMemberLookup
 public struct Tuple {
     public let values: [AttributeName: Value]
 
@@ -12,6 +13,10 @@ public struct Tuple {
     }
 
     public subscript(name: AttributeName, default value: Value) -> Value {
-        values[name] ?? value
+        values[name, default: value]
+    }
+
+    public subscript(dynamicMember member: AttributeName) -> Value {
+        self[member, default: .none]
     }
 }

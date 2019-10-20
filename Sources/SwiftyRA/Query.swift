@@ -13,6 +13,15 @@ public indirect enum Query {
         case asc, desc
     }
 
+    @dynamicMemberLookup
+    public struct Context {
+        let values: [AttributeName: Value]
+
+        public subscript(dynamicMember member: AttributeName) -> Value {
+            values[member, default: .none]
+        }
+    }
+
 //    public enum Join {
 //        case theta
 //        case natural
@@ -27,9 +36,9 @@ public indirect enum Query {
     case relation(Relation)
 
     case projection(Set<AttributeName>, Query)
-    case selection(Set<AttributeName>, ([AttributeName: Value]) throws -> Bool, Query)
+    case selection(Set<AttributeName>, (Context) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
-    case orderBy([(AttributeName, Order)], Query)
+    case orderBy(KeyValuePairs<AttributeName, Order>, Query)
 //    //case groupBy(???, Query)
 //
 //    case intersection(Query, Query)

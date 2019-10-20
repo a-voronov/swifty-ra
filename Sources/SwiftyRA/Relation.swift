@@ -4,7 +4,7 @@ public struct Relation {
     public let header: Header
     public let tuples: Tuples
 
-    public init(header: [(name: AttributeName, type: AttributeType)], tuples: [[Value]]) throws {
+    public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) throws {
         guard !header.isEmpty else {
             throw Errors.emptyHeader
         }

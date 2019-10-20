@@ -1,3 +1,4 @@
+@dynamicMemberLookup
 public struct Header {
     private let names: [AttributeName]
     private let attributesByName: [AttributeName: Attribute]
@@ -7,10 +8,14 @@ public struct Header {
     }
 
     init(attributes: [Attribute]) throws {
-        try self.init(attributes.map { attribute in (attribute.name, attribute.type) })
+        try self.init(with: attributes.map { attribute in (attribute.name, attribute.type) })
     }
 
-    init(_ attributes: [(name: AttributeName, type: AttributeType)]) throws {
+    init(_ attributes: KeyValuePairs<AttributeName, AttributeType>) throws {
+        try self.init(with: Array(attributes))
+    }
+
+    private init(with attributes: [(AttributeName, AttributeType)]) throws {
         var names: [AttributeName] = []
         var attributesByName: [AttributeName: Attribute] = [:]
 
@@ -28,5 +33,9 @@ public struct Header {
 
     public subscript(name: AttributeName) -> Attribute? {
         attributesByName[name]
+    }
+
+    public subscript(dynamicMember member: AttributeName) -> Attribute? {
+        attributesByName[member]
     }
 }

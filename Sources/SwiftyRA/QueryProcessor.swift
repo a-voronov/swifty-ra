@@ -29,18 +29,16 @@ public final class QueryProcessor {
         return Relation(header: header, tuples: tuples)
     }
 
-    private func select(from attributes: Set<AttributeName>, where predicate: ([AttributeName: Value]) throws -> Bool, r: Relation) throws -> Relation {
+    private func select(from attributes: Set<AttributeName>, where predicate: (Query.Context) throws -> Bool, r: Relation) throws -> Relation {
         for attribute in attributes {
             if r.header[attribute] == nil {
                 throw Errors.wrongAttribute(attribute)
             }
         }
         let tuples = try r.tuples.filter { tuple in
-            try predicate(tuple.values.reduce(into: [:]) { acc, pair in
-                if attributes.contains(pair.key) {
-                    acc[pair.key] = pair.value
-                }
-            })
+            try predicate(Query.Context(values: tuple.values.filter { pair in
+                attributes.contains(pair.key)
+            }))
         }
         return Relation(header: r.header, tuples: tuples)
     }
@@ -66,8 +64,8 @@ public final class QueryProcessor {
         return Relation(header: header, tuples: tuples)
     }
 
-    private func orderBy(attributes: [(attribute: AttributeName, order: Query.Order)], r: Relation) throws -> Relation {
-        let unknownAttributes = Set(attributes.map(\.attribute)).subtracting(r.header.attributes.map(\.name))
+    private func orderBy(attributes: KeyValuePairs<AttributeName, Query.Order>, r: Relation) throws -> Relation {
+        let unknownAttributes = Set(attributes.map(\.key)).subtracting(r.header.attributes.map(\.name))
         guard unknownAttributes.isEmpty else {
             throw Errors.wrongAttributes(unknownAttributes)
         }
