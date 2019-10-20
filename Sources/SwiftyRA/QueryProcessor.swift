@@ -3,8 +3,8 @@ public final class QueryProcessor {
         switch query {
         case let .projection(attrs, q):
             return try project(attributes: attrs, r: try execute(query: q))
-        case let .selection(predicate, q):
-            return try select(where: predicate, r: try execute(query: q))
+        case let .selection(attrs, predicate, q):
+            return try select(from: attrs, where: predicate, r: try execute(query: q))
         case let .rename(to, from, q):
             return try rename(to: to, from: from, r: try execute(query: q))
         case let .orderBy(attrs, q):
@@ -23,14 +23,26 @@ public final class QueryProcessor {
         })
         let tuples = r.tuples.map { tuple in
             Tuple(values: attributes.reduce(into: [:]) { (acc, attributeName) in
-                acc[attributeName] = tuple[attributeName] ?? Value.none
+                acc[attributeName] = tuple[attributeName, default: .none]
             })
         }
         return Relation(header: header, tuples: tuples)
     }
 
-    private func select(where predicate: (Tuple) -> Bool, r: Relation) throws -> Relation {
-        return Relation(header: r.header, tuples: r.tuples.filter(predicate))
+    private func select(from attributes: Set<AttributeName>, where predicate: ([AttributeName: Value]) throws -> Bool, r: Relation) throws -> Relation {
+        for attribute in attributes {
+            if r.header[attribute] == nil {
+                throw Errors.wrongAttribute(attribute)
+            }
+        }
+        let tuples = try r.tuples.filter { tuple in
+            try predicate(tuple.values.reduce(into: [:]) { acc, pair in
+                if attributes.contains(pair.key) {
+                    acc[pair.key] = pair.value
+                }
+            })
+        }
+        return Relation(header: r.header, tuples: tuples)
     }
 
     private func rename(to: AttributeName, from: AttributeName, r: Relation) throws -> Relation {
@@ -61,8 +73,8 @@ public final class QueryProcessor {
         }
         let tuples = try r.tuples.sorted { lhs, rhs in
             for (attribute, order) in attributes {
-                let l = lhs[attribute] ?? Value.none
-                let r = rhs[attribute] ?? Value.none
+                let l = lhs[attribute, default: .none]
+                let r = rhs[attribute, default: .none]
 
                 guard l != r else {
                     continue

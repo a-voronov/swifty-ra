@@ -10,4 +10,8 @@ public struct Tuple {
     public subscript(name: AttributeName) -> Value? {
         values[name]
     }
+
+    public subscript(name: AttributeName, default value: Value) -> Value {
+        values[name] ?? value
+    }
 }

@@ -27,7 +27,7 @@ public indirect enum Query {
     case relation(Relation)
 
     case projection(Set<AttributeName>, Query)
-    case selection((Tuple) -> Bool, Query)
+    case selection(Set<AttributeName>, ([AttributeName: Value]) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
     case orderBy([(AttributeName, Order)], Query)
 //    //case groupBy(???, Query)

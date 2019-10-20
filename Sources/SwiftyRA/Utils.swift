@@ -1,10 +1,10 @@
-final class Reference<Value> {
-    var value: Value
-
-    init(_ value: Value) {
-        self.value = value
-    }
-}
+//final class Reference<Value> {
+//    var value: Value
+//
+//    init(_ value: Value) {
+//        self.value = value
+//    }
+//}
 
 extension Sequence {
     func map<T>(_ keyPath: KeyPath<Element, T>) -> [T] {

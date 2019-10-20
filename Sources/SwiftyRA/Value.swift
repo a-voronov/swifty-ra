@@ -1,6 +1,6 @@
 // TODO: extend Value with boolean operations on its types (Value == 2, Value > 42, Value != "hello", ...)
 
-public enum Value: Equatable {
+public enum Value: Hashable {
     case boolean(Bool)
     case string(String)
     case integer(Int)
@@ -73,12 +73,16 @@ extension Value {
         case (.boolean(false), .boolean(true)):  return true
         case (.boolean,        .boolean):        return false
 
-        // if values are equal, result is false, otherwise non-null value is always greater than none
+        // if values are equal, result is false, otherwise non-none value is always greater than none
         case (.none, .none): return false
         case (_,     .none): return false
         case (.none, _):     return true
 
         default: throw Errors.incompatibleValues(lhs, rhs)
         }
+    }
+
+    public static func > (lhs: Value, rhs: Value) throws -> Bool {
+        try rhs < lhs
     }
 }

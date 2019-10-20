@@ -26,7 +26,8 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let q = Query.selection({ t in t["age"]!.integer! > 20 && t["hobby"]?.hasValue == true }, .relation(r))
+        let q = Query.selection(["age", "hobby"], { ctx in try ctx["age"]! > 20 && ctx["hobby"]?.hasValue == true }, .relation(r))
+//        let q = Query.selection(.and(.gt(.value("age", 20)), .not(.eq(.value("hobby", nil)))), .relation(r))
         let s = try! QueryProcessor().execute(query: q)
 
         print(s.tuples)
