@@ -1,4 +1,5 @@
 public final class QueryProcessor {
+    // TODO: optimize recursion to iterative process
     public func execute(query: Query) throws -> Relation {
         switch query {
         case let .projection(attrs, q):
@@ -47,9 +48,9 @@ public final class QueryProcessor {
         guard r.header[from] != nil else {
             throw Errors.wrongAttribute(from)
         }
-        guard r.header[to] == nil else {
-            throw Errors.duplicatedAttribute(to)
-        }
+//        guard r.header[to] == nil else {
+//            throw Errors.duplicatedAttribute(to)
+//        }
         let header = try Header(attributes: r.header.attributes.map { attribute in
             attribute.name == from
                 ? Attribute(name: to, type: attribute.type)
