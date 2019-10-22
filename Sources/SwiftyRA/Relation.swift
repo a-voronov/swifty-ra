@@ -98,54 +98,11 @@ public extension Relation {
     func order(by attributes: KeyValuePairs<AttributeName, Query.SortingOrder>) -> Relation {
         withQuery { q in .orderBy(attributes, q) }
     }
-
-//    var select: Selection {
-//        Selection(relation: self)
-//    }
 }
 
-//@dynamicCallable
-//public struct Selection {
-//    public enum Operation {
-//        public enum Members {
-//            case attr(AttributeName)
-//            case value(Value)
-//        }
-//
-//        case eq(Members)
-//        case neq(Members)
-//        case gt(Members)
-//        case lt(Members)
-//        case ge(Members)
-//        case le(Members)
-//    }
-//
-//    fileprivate let relation: Relation
-//
-//    func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Value>) -> Relation {
-//        call(with: args.map { key, value in (key, .eq(.value(value))) })
-//    }
-//
-//    func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Operation>) -> Relation {
-//        call(with: Array(args))
-//    }
-//
-//    private func call(with args: [(key: AttributeName, value: Operation)]) -> Relation {
-//        let attributes = Set(args.map(\.key).filter(\.isNotEmpty))
-//        let values: [AttributeName: Operation] = args.reduce(into: [:]) { acc, pair in
-//            guard pair.key.isNotEmpty else {
-//                return
-//            }
-//            acc[pair.key] = pair.value
-//        }
-//        return relation.select(
-//            from: attributes,
-//            where: { ctx in
-//                attributes.reduce(into: true) { acc, attribute in
-//                    // TODO: resolve Operation
-////                    acc = acc && ctx[attribute] == values[attribute]
-//                }
-//            }
-//        )
-//    }
-//}
+public extension Relation {
+    var select: Selection {
+        Selection(relation: self)
+    }
+}
+

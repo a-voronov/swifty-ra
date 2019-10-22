@@ -41,7 +41,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let s = r//.select(age: .gt(.value(20)), hobby: .neq(.value(nil)))
+        let s = r.select(age: .gt(.value(20)), hobby: .neq(.value(nil)))
 
         print(s.tuples.value!)
     }
