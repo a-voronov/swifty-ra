@@ -1,18 +1,18 @@
-public enum ValueType: Equatable {
+public enum ValueType: Hashable {
     case boolean
     case string
     case integer
     case float
 }
 
-public enum AttributeType: Equatable {
+public enum AttributeType: Hashable {
     case required(ValueType)
     case optional(ValueType)
 }
 
 public typealias AttributeName = String
 
-public struct Attribute: Equatable {
+public struct Attribute: Hashable {
     public let name: AttributeName
     public let type: AttributeType
 

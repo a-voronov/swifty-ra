@@ -1,21 +1,25 @@
 /// [Syntax Diagram.](https://dbis-uibk.github.io/relax/help.htm#relalg-relalgexpr)
 ///
-///```
-///.join(.leftOuter,
-///    .projection(["id", "name"],
-///        .relation(r)
-///    ),
-///    .relation(s)
-///)
-///```
+/// Recursive query representation. Ends with provided relation.
+///
+/// ```
+/// .join(.leftOuter,
+///     .projection(["id", "name"],
+///         .relation(r)
+///     ),
+///     .relation(s)
+/// )
+/// ```
 public indirect enum Query {
-    public enum Order {
+    public enum SortingOrder {
         case asc, desc
     }
 
+    /// Context containing values requested by attributes while performing selection query.
+    /// Provides dynamic member access via property as well as via usual subscript by name.
     @dynamicMemberLookup
-    public struct Context {
-        let values: [AttributeName: Value]
+    public struct SelectionContext {
+        public let values: [AttributeName: Value]
 
         public subscript(name: AttributeName) -> Value? {
             values[name]
@@ -44,9 +48,9 @@ public indirect enum Query {
     case relation(Relation)
 
     case projection(Set<AttributeName>, Query)
-    case selection(Set<AttributeName>, (Context) throws -> Bool, Query)
+    case selection(Set<AttributeName>, (SelectionContext) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
-    case orderBy(KeyValuePairs<AttributeName, Order>, Query)
+    case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
 //    //case groupBy(???, Query)
 //
 //    case intersection(Query, Query)

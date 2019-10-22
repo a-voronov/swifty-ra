@@ -1,5 +1,6 @@
-// TODO: extend Value with boolean operations on its types (Value == 2, Value > 42, Value != "hello", ...)
-
+/// Values allowed to be stored in relation tuples.
+/// Can be constructed using basic literals as well as enum cases.
+/// Can be compared, and will throws error if values of incompatible types are compared.
 public enum Value: Hashable {
     case boolean(Bool)
     case string(String)
@@ -62,11 +63,19 @@ public extension Value {
 }
 
 extension Value {
+    public enum Errors: Error {
+        case incompatible(Value, Value)
+    }
+
     public static func < (lhs: Value, rhs: Value) throws -> Bool {
         switch (lhs, rhs) {
         case let (.string(l),  .string(r)):  return l < r
         case let (.integer(l), .integer(r)): return l < r
         case let (.float(l),   .float(r)):   return l < r
+
+        // numbers can be compared by treating integer as a number with floating point
+        case let (.float(l),   .integer(r)):   return l < Float(r)
+        case let (.integer(l),   .float(r)):   return Float(l) < r
 
         // if values are equal, result is false, otherwise true is always greater than false
         case (.boolean(true),  .boolean(false)): return false
@@ -78,7 +87,7 @@ extension Value {
         case (_,     .none): return false
         case (.none, _):     return true
 
-        default: throw Errors.incompatibleValues(lhs, rhs)
+        default: throw Errors.incompatible(lhs, rhs)
         }
     }
 

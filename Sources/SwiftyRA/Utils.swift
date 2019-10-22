@@ -18,25 +18,35 @@ final class Reference<Value> {
 
 public extension Collection {
     var isNotEmpty: Bool {
-        return !isEmpty
+        !isEmpty
     }
 }
 
 extension Sequence {
     func map<T>(_ keyPath: KeyPath<Element, T>) -> [T] {
-        return map { $0[keyPath: keyPath] }
+        map { $0[keyPath: keyPath] }
     }
 
     func compactMap<T>(_ keyPath: KeyPath<Element, T?>) -> [T] {
-        return compactMap { $0[keyPath: keyPath] }
+        compactMap { $0[keyPath: keyPath] }
     }
 
     func flatMap<T>(_ keyPath: KeyPath<Element, [T]>) -> [T] {
-        return flatMap { $0[keyPath: keyPath] }
+        flatMap { $0[keyPath: keyPath] }
     }
 
     func filter(_ keyPath: KeyPath<Element, Bool>) -> [Element] {
-        return filter { $0[keyPath: keyPath] }
+        filter { $0[keyPath: keyPath] }
+    }
+}
+
+extension Result {
+    func map<T>(_ keyPath: KeyPath<Success, T>) -> Result<T, Failure> {
+        map { $0[keyPath: keyPath] }
+    }
+
+    func flatMap<T>(_ keyPath: KeyPath<Success, Result<T, Failure>>) -> Result<T, Failure> {
+        flatMap { $0[keyPath: keyPath] }
     }
 }
 
