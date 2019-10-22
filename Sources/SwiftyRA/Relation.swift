@@ -1,37 +1,3 @@
-// MARK: - Passive Relation
-
-//public struct Relation {
-//    public let header: Header
-//    public let tuples: Tuples
-//
-//    public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) throws {
-//        guard !header.isEmpty else {
-//            throw Errors.emptyHeader
-//        }
-//        let header = try Header(header)
-//        self.header = header
-//        self.tuples = tuples.compactMap { tuple -> Tuple? in
-//            var valuesPerName: [AttributeName: Value] = [:]
-//            for (index, attribute) in header.attributes.enumerated() {
-//                let value = index < tuple.count ? tuple[index] : nil
-//                if value.isMatching(type: attribute.type) {
-//                    valuesPerName[attribute.name] = value
-//                } else {
-//                    return nil
-//                }
-//            }
-//            return Tuple(values: valuesPerName)
-//        }
-//    }
-//
-//    init(header: Header, tuples: Tuples) {
-//        self.header = header
-//        self.tuples = tuples
-//    }
-//}
-
-// MARK: - Active Relation
-
 /// Stores header with attributes in the given order, which serves as a relation scheme.
 /// Stores tuples with values.
 /// Can be either in sucess or failure state. Can't restore from the failure state. Can fail from the success state.
@@ -49,18 +15,24 @@ public struct Relation {
     private enum InnerState {
         case resolved(Header, Tuples)
         case unresolved(Query)
+
+        var query: Query? {
+            guard case let .unresolved(q) = self else { return nil }
+            return q
+        }
     }
 
-    private var innerState: Result<InnerState, Errors>
+    private let innerState: Reference<Result<InnerState, Errors>>
 
     public var state: Result<State, Errors> {
-        innerState.flatMap { s in
+        innerState.value.flatMap { s in
             switch s {
             case let .resolved(h, ts):
                 return .success(State(h, ts))
             case let .unresolved(q):
-//                innerState = ...
-                return q.execute().flatMap(\.state)
+                self.innerState.value = q.execute().flatMap(\.innerState.value)
+
+                return self.state
             }
         }
     }
@@ -78,7 +50,7 @@ public struct Relation {
     /// Values' order in Tuple should correspond to Header Attributes order, otherwise Tuple will be treated as invalid.
     /// Invalid Tuples will be just ignored and not added into Relation (make this behvaior configuarble to result in error?).
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) {
-        innerState = Header.create(header).mapError(Relation.Errors.header).flatMap { header in
+        innerState = Reference(Header.create(header).mapError(Relation.Errors.header).flatMap { header in
             let tuples = tuples.compactMap { tuple -> Tuple? in
                 var valuesPerName: [AttributeName: Value] = [:]
                 for (index, attribute) in header.attributes.enumerated() {
@@ -92,101 +64,45 @@ public struct Relation {
                 return Tuple(values: valuesPerName)
             }
             return .success(.resolved(header, tuples))
-        }
+        })
     }
 
     init(header: Header, tuples: Tuples) {
-        innerState = .success(.resolved(header, tuples))
+        innerState = Reference(.success(.resolved(header, tuples)))
+    }
+
+    init(query: Query) {
+        innerState = Reference(.success(.unresolved(query)))
     }
 }
 
-//public struct Relation {
-//    private enum State {
-//        case resolved(Header, Tuples)
-//        case unresolved(Header, Tuples, Query)
-//    }
-//
-////    private var state: Reference<State>
-//    private var query: Query? = nil
-//
-//    public let header: Header
-//    public let tuples: Tuples
-//
-//    public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) throws {
-//        guard !header.isEmpty else {
-//            throw Errors.emptyHeader
-//        }
-//        let header = try Header(header)
-//        self.header = header
-//        self.tuples = tuples.compactMap { tuple -> Tuple? in
-//            var valuesPerName: [AttributeName: Value] = [:]
-//            for (index, attribute) in header.attributes.enumerated() {
-//                let value = index < tuple.count ? tuple[index] : nil
-//                if value.isMatching(type: attribute.type) {
-//                    valuesPerName[attribute.name] = value
-//                } else {
-//                    return nil
-//                }
-//            }
-//            return Tuple(values: valuesPerName)
-//        }
-////        state = Reference(.resolved(self.header, self.tuples))
-//    }
-//
-//    init(header: Header, tuples: Tuples) {
-//        self.header = header
-//        self.tuples = tuples
-//
-////        state = Reference(.resolved(self.header, self.tuples))
-//    }
-//}
+public extension Relation {
+    private func withQuery(_ transform: (Query) -> Query) -> Relation {
+        innerState.value.map(\.query).value.map { q in
+            Relation(query: transform(q ?? .relation(self)))
+        } ?? self
+    }
 
-//extension Relation {
-////    private func update(query: Query, relation: inout Relation) -> Relation {
-////        var r = relation
-////        r.query = query
-////        return r
-////    }
-//
-////    private func updated(relation: (inout Relation) -> Void) -> Relation {
-////        var r = self
-////        relation(&r)
-////        return r
-////    }
-//
-////    private var query: Query {
-////        get {
-////            switch state.value {
-////            case .resolved: return .relation(self)
-////            case .unresolved(_, _, let q): return q
-////            }
-////        }
-////    }
-////
-////    private func set(query: Query) -> Relation {
-////        switch state.value {
-////        case let .resolved(h, ts): state.value = .unresolved(h, ts, query)
-////        case let .unresolved(h, ts, _): state.value = .unresolved(h, ts, query)
-////        }
-////        return self
-////    }
-////
-//    func project(attributes: Set<AttributeName>) -> Relation {
-//        updating(self) { r in r.query = .projection(attributes, r.query ?? .relation(r)) }
+    func project(attributes: Set<AttributeName>) -> Relation {
+        withQuery { q in .projection(attributes, q) }
+    }
+
+    func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.SelectionContext) throws -> Bool) -> Relation {
+        withQuery { q in .selection(attributes, predicate, q) }
+    }
+
+    func rename(to newAttribute: AttributeName, from originalAttribute: AttributeName) -> Relation {
+        withQuery { q in .rename(newAttribute, originalAttribute, q) }
+    }
+
+    func order(by attributes: KeyValuePairs<AttributeName, Query.SortingOrder>) -> Relation {
+        withQuery { q in .orderBy(attributes, q) }
+    }
+
+//    var select: Selection {
+//        Selection(relation: self)
 //    }
-//
-//    func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.Context) throws -> Bool) -> Relation {
-//        updating(self) { r in r.query = .selection(attributes, predicate, r.query ?? .relation(r)) }
-//    }
-//
-////    var select: Selection {
-////        Selection(relation: self)
-////    }
-//
-//    func resolve() throws -> Relation {
-//        try query.map(QueryProcessor().execute) ?? self
-//    }
-//}
+}
 
 //@dynamicCallable
 //public struct Selection {
@@ -232,71 +148,4 @@ public struct Relation {
 //            }
 //        )
 //    }
-//}
-
-//public struct Relation {
-//    private enum State {
-//        case resolved(Header, Tuples)
-//        case unresolved(Header, Tuples, Query)
-//    }
-//
-//    public var header: Header { resolvingState().header }
-//    public var tuples: Tuples { resolvingState().tuples }
-//
-//    private var state: Reference<State>
-//
-//    private var query: Query? {
-//        guard case let .unresolved(_, _, q) = state.value else { return nil }
-//        return q
-//    }
-//
-//    public init(header: [(name: AttributeName, type: AttributeType)], tuples: [[Value]]) throws {
-//        guard !header.isEmpty else {
-//            throw Errors.emptyHeader
-//        }
-//        let header = try Header(header)
-//        let tuples = tuples.compactMap { tuple -> Tuple? in
-//            var valuesPerName: [AttributeName: Value] = [:]
-//            for (index, attribute) in header.attributes.enumerated() {
-//                let value = index < tuple.count ? tuple[index] : nil
-//                if value.isMatching(type: attribute.type) {
-//                    valuesPerName[attribute.name] = value
-//                } else {
-//                    return nil
-//                }
-//            }
-//            return Tuple(values: valuesPerName)
-//        }
-//        state = Reference(.resolved(header, tuples))
-//    }
-//
-//    init(header: Header, tuples: Tuples, query: Query? = nil) {
-//        if let query = query {
-//            state = Reference(.unresolved(header, tuples, query))
-//        } else {
-//            state = Reference(.resolved(header, tuples))
-//        }
-//    }
-//
-//    private func resolvingState() -> (header: Header, tuples: Tuples) {
-//        switch state.value {
-//        case let .resolved(h, ts):
-//            return (h, ts)
-//        case let .unresolved(h, ts, q):
-//            let (newH, newTs) = resolve(query: q,  with: (header, tuples))
-//            state.value = .resolved(newH, newTs)
-//            return (newH, newTs)
-//        }
-//    }
-//
-//    private func resolve(query: Query, with relation: (header: Header, tuples: Tuples)) -> (header: Header, tuples: Tuples) {
-//        // query optimizer -> query processor
-//        return (relation.header, relation.tuples)
-//    }
-//}
-//
-//public extension Relation {
-//     func project(_ attributes: [AttributeName]) -> Relation {
-//         Relation(header: header, tuples: tuples, query: .projection(attributes, query ?? .relation(self)))
-//     }
 //}
