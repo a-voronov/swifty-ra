@@ -10,6 +10,7 @@ public extension Query {
         case let .selection(attrs, predicate, q): return q.execute().flatMap(select(from: attrs, where: predicate))
         case let .rename(to, from, q):            return q.execute().flatMap(rename(to: to, from: from))
         case let .orderBy(attrs, q):              return q.execute().flatMap(orderBy(attributes: attrs))
+        case let .intersection(lhs, rhs):         return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(intersect)
         case let .relation(r):                    return .success(r)
         }
     }
@@ -128,5 +129,12 @@ public extension Query {
             }
             .mapError { .value($0 as! Value.Errors) }
         }}
+    }
+
+    private func intersect(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: Implement me!
+            return .success(one)
+        }
     }
 }

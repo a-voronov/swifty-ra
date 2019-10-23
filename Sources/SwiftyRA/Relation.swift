@@ -79,26 +79,42 @@ public struct Relation {
 }
 
 public extension Relation {
-    private func withQuery(_ transform: (Query) -> Query) -> Relation {
-        innerState.value.map(\.query).value.map { q in
-            Relation(query: transform(q ?? .relation(self)))
-        } ?? self
+    private func withUnaryQuery(_ transform: (Query) -> Query) -> Relation {
+        innerState.value.map(\.query)
+            .map { q in
+                Relation(query: transform(q ?? .relation(self)))
+            }
+            .value ?? self
+    }
+
+    // TODO: in case of error in any relation, might it be better to return new relation with that error instead of current one?
+    private func withBinaryQuery(other: Relation, transform: (Query, Query) -> Query) -> Relation {
+        zip(innerState.value.map(\.query), other.innerState.value.map(\.query))
+            .mapError(\.value)
+            .map { q, otherQ in
+                Relation(query: transform(q ?? .relation(self), otherQ ?? .relation(other)))
+            }
+            .value ?? self
     }
 
     func project(attributes: Set<AttributeName>) -> Relation {
-        withQuery { q in .projection(attributes, q) }
+        withUnaryQuery { q in .projection(attributes, q) }
     }
 
     func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.SelectionContext) throws -> Bool) -> Relation {
-        withQuery { q in .selection(attributes, predicate, q) }
+        withUnaryQuery { q in .selection(attributes, predicate, q) }
     }
 
     func rename(to newAttribute: AttributeName, from originalAttribute: AttributeName) -> Relation {
-        withQuery { q in .rename(newAttribute, originalAttribute, q) }
+        withUnaryQuery { q in .rename(newAttribute, originalAttribute, q) }
     }
 
     func order(by attributes: KeyValuePairs<AttributeName, Query.SortingOrder>) -> Relation {
-        withQuery { q in .orderBy(attributes, q) }
+        withUnaryQuery { q in .orderBy(attributes, q) }
+    }
+
+    func intersect(with other: Relation) -> Relation {
+        withBinaryQuery(other: other) { lq, rq in .intersection(lq, rq) }
     }
 }
 

@@ -51,9 +51,9 @@ public indirect enum Query {
     case selection(Set<AttributeName>, (SelectionContext) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
     case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
-//    //case groupBy(???, Query)
-//
-//    case intersection(Query, Query)
+    // case groupBy(???, Query) <- should implement it?
+
+    case intersection(Query, Query)
 //    case union(Query, Query)
 //    case division(Query, Query)
 //    case substraction(Query, Query)

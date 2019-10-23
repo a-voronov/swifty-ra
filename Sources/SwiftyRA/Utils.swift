@@ -7,6 +7,25 @@ final class Reference<Value> {
     }
 }
 
+/// Either type
+enum Either<A, B> {
+    case left(A)
+    case right(B)
+}
+
+/// Either as Error
+extension Either: Error where A: Error, B: Error {}
+
+/// Either value if types are the same
+extension Either where A == B {
+    var value: A {
+        switch self {
+        case let .left(v): return v
+        case let .right(v): return v
+        }
+    }
+}
+
 /// Collection isNotEmpty
 public extension Collection {
     var isNotEmpty: Bool {
@@ -56,8 +75,23 @@ extension Result {
         map { $0[keyPath: keyPath] }
     }
 
+    func mapError<T: Error>(_ keyPath: KeyPath<Failure, T>) -> Result<Success, T> {
+        mapError { $0[keyPath: keyPath] }
+    }
+
     func flatMap<T>(_ keyPath: KeyPath<Success, Result<T, Failure>>) -> Result<T, Failure> {
         flatMap { $0[keyPath: keyPath] }
+    }
+
+    func flatMapError<T: Error>(_ keyPath: KeyPath<Failure, Result<Success, T>>) -> Result<Success, T> {
+        flatMapError { $0[keyPath: keyPath] }
+    }
+}
+
+/// Zip 2 Results
+func zip<A, B, E: Error, F: Error>(_ a: Result<A, E>, _ b: Result<B, F>) -> Result<(A, B), Either<E, F>> {
+    a.mapError(Either.left).flatMap { a in
+        b.mapError(Either.right).flatMap { b in .success((a, b)) }
     }
 }
 
