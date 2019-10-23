@@ -12,6 +12,7 @@ public extension Query {
         case let .rename(to, from, q):            return q.execute().flatMap(rename(to: to, from: from))
         case let .orderBy(attrs, q):              return q.execute().flatMap(orderBy(attributes: attrs))
         case let .intersection(lhs, rhs):         return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(intersect)
+        case let .union(lhs, rhs):                return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(union)
         case let .relation(r):                    return .success(r)
         }
     }
@@ -138,6 +139,16 @@ public extension Query {
                 return .failure(.query(.schemasNotUnifiable(l.header.attributes, r.header.attributes)))
             }
             let tuples = Array(Set(l.tuples).intersection(r.tuples))
+            return .success(Relation(header: l.header, tuples: tuples))
+        }
+    }
+
+    private func union(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            guard l.header == r.header else {
+                return .failure(.query(.schemasNotUnifiable(l.header.attributes, r.header.attributes)))
+            }
+            let tuples = Array(Set(l.tuples).union(r.tuples))
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }

@@ -54,7 +54,7 @@ public indirect enum Query {
     // case groupBy(???, Query) <- should implement it?
 
     case intersection(Query, Query)
-//    case union(Query, Query)
+    case union(Query, Query)
 //    case division(Query, Query)
 //    case substraction(Query, Query)
 //    case crossProduct(Query, Query)

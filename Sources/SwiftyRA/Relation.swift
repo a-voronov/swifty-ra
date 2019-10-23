@@ -116,6 +116,10 @@ public extension Relation {
     func intersect(with other: Relation) -> Relation {
         withBinaryQuery(other: other) { lq, rq in .intersection(lq, rq) }
     }
+
+    func union(with other: Relation) -> Relation {
+        withBinaryQuery(other: other) { lq, rq in .union(lq, rq) }
+    }
 }
 
 public extension Relation {
