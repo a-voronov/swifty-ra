@@ -1,4 +1,5 @@
 public extension Query {
+    // TODO: add info about failed operation with path to it?
     enum Errors: Error {
         case wrongAttributes(Set<AttributeName>)
     }

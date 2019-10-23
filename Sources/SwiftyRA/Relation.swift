@@ -30,7 +30,7 @@ public struct Relation {
             case let .resolved(h, ts):
                 return .success(State(h, ts))
             case let .unresolved(q):
-                self.innerState.value = q.execute().flatMap(\.innerState.value)
+                self.innerState.value = q.optimize().execute().flatMap(\.innerState.value)
 
                 return self.state
             }
@@ -44,6 +44,8 @@ public struct Relation {
     public var tuples: Result<Tuples, Errors> {
         state.map(\.tuples)
     }
+
+    // TODO: add intiializer with tuples with named values?
 
     /// Preserves header attributes order.
     /// Duplicated attributes will cause error.
@@ -103,6 +105,10 @@ public extension Relation {
 public extension Relation {
     var select: Selection {
         Selection(relation: self)
+    }
+
+    var order: Ordering {
+        Ordering(relation: self)
     }
 }
 

@@ -2,11 +2,11 @@
 public struct Selection {
     let relation: Relation
 
-    func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Value>) -> Relation {
+    public func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Value>) -> Relation {
         call(with: args.map { key, value in (key, .eq(.value(value))) })
     }
 
-    func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Operation>) -> Relation {
+    public func dynamicallyCall(withKeywordArguments args: KeyValuePairs<AttributeName, Operation>) -> Relation {
         call(with: Array(args))
     }
 
@@ -39,6 +39,7 @@ public struct Selection {
     }
 }
 
+// TODO: fully support boolean expressions with explicit values operations?
 extension Selection {
     public enum Operation {
         public enum Members {

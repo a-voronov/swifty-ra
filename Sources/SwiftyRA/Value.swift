@@ -96,10 +96,10 @@ extension Value {
     }
 
     public static func >= (lhs: Value, rhs: Value) throws -> Bool {
-        try rhs > lhs || rhs == lhs
+        try lhs > rhs || lhs == rhs
     }
 
     public static func <= (lhs: Value, rhs: Value) throws -> Bool {
-        try rhs < lhs || rhs == lhs
+        try lhs < rhs || lhs == rhs
     }
 }

@@ -69,6 +69,20 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
+        let s = r.order(hobby: .asc, age: .asc)
+
+        print(s.tuples.value!)
+    }
+
+    func testOrderingWithPredicate() {
+        let r = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
         let s = r.order(by: ["hobby": .asc, "age": .asc])
 
         print(s.tuples.value!)
@@ -80,5 +94,6 @@ final class SwiftyRATests: XCTestCase {
         ("testSelectionWithPredicate", testSelectionWithPredicate),
         ("testRenaming",  testRenaming),
         ("testOrdering",  testOrdering),
+        ("testOrderingWithPredicate", testOrderingWithPredicate)
     ]
 }
