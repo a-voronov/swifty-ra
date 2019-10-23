@@ -3,7 +3,7 @@
 /// Emmits only `Header.Error` errors.
 /// Provides dynamic member access via property as well as via usual subscript by name.
 @dynamicMemberLookup
-public struct Header {
+public struct Header: Hashable {
     public enum Errors: Error {
         case empty
         case duplicates(Set<AttributeName>)

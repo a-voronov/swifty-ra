@@ -88,12 +88,35 @@ final class SwiftyRATests: XCTestCase {
         print(s.tuples.value!)
     }
 
+    func testIntersection() {
+        let r = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
+        let s = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21],
+                [2, "Bobby", 24, "cycling"],
+                [3, "Carol", 19, nil]
+            ]
+        )
+        let o = r.intersect(with: s)
+
+        print(o.tuples.value!)
+    }
+
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
         ("testSelectionWithPredicate", testSelectionWithPredicate),
         ("testRenaming",  testRenaming),
         ("testOrdering",  testOrdering),
-        ("testOrderingWithPredicate", testOrderingWithPredicate)
+        ("testOrderingWithPredicate", testOrderingWithPredicate),
+        ("testIntersection", testIntersection),
     ]
 }

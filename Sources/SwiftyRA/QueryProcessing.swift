@@ -2,6 +2,7 @@ public extension Query {
     // TODO: add info about failed operation with path to it?
     enum Errors: Error {
         case wrongAttributes(Set<AttributeName>)
+        case schemasNotUnifiable([Attribute], [Attribute])
     }
 
     func execute() -> Result<Relation, Relation.Errors> {
@@ -120,7 +121,7 @@ public extension Query {
 
                         switch order {
                         case .asc:  return try l < r
-                        case .desc: return try r < l
+                        case .desc: return try l > r
                         }
                     }
                     return false
@@ -133,8 +134,11 @@ public extension Query {
 
     private func intersect(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: Implement me!
-            return .success(one)
+            guard l.header == r.header else {
+                return .failure(.query(.schemasNotUnifiable(l.header.attributes, r.header.attributes)))
+            }
+            let tuples = Array(Set(l.tuples).intersection(r.tuples))
+            return .success(Relation(header: l.header, tuples: tuples))
         }
     }
 }

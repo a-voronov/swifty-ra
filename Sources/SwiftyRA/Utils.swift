@@ -27,7 +27,7 @@ extension Either where A == B {
 }
 
 /// Collection isNotEmpty
-public extension Collection {
+extension Collection {
     var isNotEmpty: Bool {
         !isEmpty
     }

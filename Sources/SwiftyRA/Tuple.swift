@@ -4,7 +4,7 @@ public typealias Tuples = [Tuple]
 /// Doesn't preserve values order.
 /// Allows dynamic member access via property as well as via usual subscript by name.
 @dynamicMemberLookup
-public struct Tuple {
+public struct Tuple: Hashable {
     public private(set) var values: [AttributeName: Value]
 
     public init(values: [AttributeName: Value]) {
