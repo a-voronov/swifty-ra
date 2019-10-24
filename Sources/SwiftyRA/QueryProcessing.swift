@@ -22,6 +22,14 @@ public extension Query {
         case let .subtraction(lhs, rhs):          return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(subtract)
         case let .product(lhs, rhs):              return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(product)
         case let .division(lhs, rhs):             return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(divide)
+        case let .join(.natural, lhs, rhs):       return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(naturalJoin)
+        case let .join(.theta, lhs, rhs):         return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(thetaJoin)
+        case let .join(.leftOuter, lhs, rhs):     return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(leftOuterJoin)
+        case let .join(.rightOuter, lhs, rhs):    return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(rightOuterJoin)
+        case let .join(.fullOuter, lhs, rhs):     return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(fullOuterJoin)
+        case let .join(.leftSemi, lhs, rhs):      return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(leftSemiJoin)
+        case let .join(.rightSemi, lhs, rhs):     return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(rightSemiJoin)
+        case let .join(.antiSemi, lhs, rhs):      return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(antiSemiJoin)
         case let .relation(r):                    return .success(r)
         }
     }
@@ -194,6 +202,62 @@ public extension Query {
             guard Set(lAttrs).isSuperset(of: rAttrs) else {
                 return .failure(.query(.attributesNotSupersetToAnother(lAttrs, rAttrs)))
             }
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func naturalJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func thetaJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func leftOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func rightOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func fullOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func leftSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func rightSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
+    private func antiSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }

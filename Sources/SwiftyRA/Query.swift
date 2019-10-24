@@ -34,16 +34,16 @@ public indirect enum Query {
         }
     }
 
-//    public enum Join {
-//        case theta
-//        case natural
-//        case leftOuter
-//        case rightOuter
-//        case fullOuter
-//        case leftSemi
-//        case rightSemi
-//        case antiSemi
-//    }
+    public enum Join {
+        case natural
+        case theta
+        case leftOuter
+        case rightOuter
+        case fullOuter
+        case leftSemi
+        case rightSemi
+        case antiSemi
+    }
 
     case relation(Relation)
 
@@ -61,5 +61,5 @@ public indirect enum Query {
     // cross product, cross join, cartesian product
     case product(Query, Query)
     case division(Query, Query)
-//    case join(Join, Query, Query)
+    case join(Join, Query, Query)
 }
