@@ -4,7 +4,8 @@ Relational Algebra in Swift.
 
 ## TODO
 - debug descriptions
-- combine multiple errors to give complete result
-- build query tree instead of straight execution
+- provide verbose errors (especially if complex query processing fails)
+- support indexing and primary keys
 - optimize query tree
-- think of nice DSL
+- serialize/deserialize to/from Relation
+- think of DSL
