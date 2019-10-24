@@ -1,8 +1,14 @@
 public extension Query {
     // TODO: add info about failed operation with path to it?
     enum Errors: Error {
+        /// no such attributes
         case wrongAttributes(Set<AttributeName>)
-        case schemasNotUnifiable([Attribute], [Attribute])
+        /// should be equal
+        case attributesNotUnionCompatible([Attribute], [Attribute])
+        /// should not share common attributes
+        case attributesNotDisjointed([Attribute], [Attribute])
+        /// should contain all attributes from another relation
+        case attributesNotSupersetToAnother([Attribute], [Attribute])
     }
 
     func execute() -> Result<Relation, Relation.Errors> {
@@ -13,6 +19,9 @@ public extension Query {
         case let .orderBy(attrs, q):              return q.execute().flatMap(orderBy(attributes: attrs))
         case let .intersection(lhs, rhs):         return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(intersect)
         case let .union(lhs, rhs):                return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(union)
+        case let .subtraction(lhs, rhs):          return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(subtract)
+        case let .product(lhs, rhs):              return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(product)
+        case let .division(lhs, rhs):             return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(divide)
         case let .relation(r):                    return .success(r)
         }
     }
@@ -29,11 +38,9 @@ public extension Query {
                 }
                 projectedAttributes.append(attribute)
             }
-
             guard errors.isEmpty else {
                 return .failure(.query(.wrongAttributes(errors)))
             }
-
             return Header.create(attributes: projectedAttributes).mapError(Relation.Errors.header).map { header in
                 let tuples = s.tuples.map { tuple in
                     Tuple(values: attributes.reduce(into: [:]) { acc, attributeName in
@@ -57,11 +64,9 @@ public extension Query {
                     errors.insert(attribute)
                 }
             }
-
             guard errors.isEmpty else {
                 return .failure(.query(.wrongAttributes(errors)))
             }
-
             do {
                 let tuples = try s.tuples.filter { tuple in
                     try predicate(Query.SelectionContext(values: tuple.values.filter { pair in
@@ -90,7 +95,6 @@ public extension Query {
             }
             var attributes = s.header.attributes
             attributes[originalIndex] = Attribute(name: new, type: originalAttr.type)
-
             // header better be created first to fail early if something is wrong with attributes
             return Header.create(attributes: attributes)
                 .mapError(Relation.Errors.header)
@@ -136,7 +140,7 @@ public extension Query {
     private func intersect(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
-                return .failure(.query(.schemasNotUnifiable(l.header.attributes, r.header.attributes)))
+                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
             }
             let tuples = Array(Set(l.tuples).intersection(r.tuples))
             return .success(Relation(header: l.header, tuples: tuples))
@@ -146,10 +150,53 @@ public extension Query {
     private func union(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
-                return .failure(.query(.schemasNotUnifiable(l.header.attributes, r.header.attributes)))
+                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
             }
             let tuples = Array(Set(l.tuples).union(r.tuples))
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }
+
+    private func subtract(one: Relation, from another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            guard l.header == r.header else {
+                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
+            }
+            let tuples = Array(Set(l.tuples).subtracting(r.tuples))
+            return .success(Relation(header: l.header, tuples: tuples))
+        }
+    }
+
+    private func product(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            let lAttrs = l.header.attributes
+            let rAttrs = r.header.attributes
+            guard Set(lAttrs).isDisjoint(with: rAttrs) else {
+                return .failure(.query(.attributesNotDisjointed(lAttrs, rAttrs)))
+            }
+            return Header.create(attributes: lAttrs + rAttrs)
+                .mapError(Relation.Errors.header)
+                .map { header in
+                    let tuples = l.tuples.flatMap { lt in
+                        r.tuples.map { rt in
+                            Tuple(values: lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig }))
+                        }
+                    }
+                    return Relation(header: header, tuples: tuples)
+                }
+        }
+    }
+
+    private func divide(one: Relation, by another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            let lAttrs = l.header.attributes
+            let rAttrs = r.header.attributes
+            guard Set(lAttrs).isSuperset(of: rAttrs) else {
+                return .failure(.query(.attributesNotSupersetToAnother(lAttrs, rAttrs)))
+            }
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
 }
+

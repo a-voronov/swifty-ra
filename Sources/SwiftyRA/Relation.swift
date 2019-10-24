@@ -88,11 +88,11 @@ public extension Relation {
     }
 
     // TODO: in case of error in any relation, might it be better to return new relation with that error instead of current one?
-    private func withBinaryQuery(other: Relation, transform: (Query, Query) -> Query) -> Relation {
-        zip(innerState.value.map(\.query), other.innerState.value.map(\.query))
+    private func withBinaryQuery(another: Relation, transform: (Query, Query) -> Query) -> Relation {
+        zip(innerState.value.map(\.query), another.innerState.value.map(\.query))
             .mapError(\.value)
-            .map { q, otherQ in
-                Relation(query: transform(q ?? .relation(self), otherQ ?? .relation(other)))
+            .map { q, anotherQ in
+                Relation(query: transform(q ?? .relation(self), anotherQ ?? .relation(another)))
             }
             .value ?? self
     }
@@ -113,12 +113,24 @@ public extension Relation {
         withUnaryQuery { q in .orderBy(attributes, q) }
     }
 
-    func intersect(with other: Relation) -> Relation {
-        withBinaryQuery(other: other) { lq, rq in .intersection(lq, rq) }
+    func intersect(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .intersection(lq, rq) }
     }
 
-    func union(with other: Relation) -> Relation {
-        withBinaryQuery(other: other) { lq, rq in .union(lq, rq) }
+    func union(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .union(lq, rq) }
+    }
+
+    func subtract(from another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .subtraction(lq, rq) }
+    }
+
+    func product(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .product(lq, rq) }
+    }
+
+    func divide(by another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .division(lq, rq) }
     }
 }
 

@@ -48,6 +48,7 @@ public indirect enum Query {
     case relation(Relation)
 
     case projection(Set<AttributeName>, Query)
+    // restriction
     case selection(Set<AttributeName>, (SelectionContext) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
     case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
@@ -55,8 +56,10 @@ public indirect enum Query {
 
     case intersection(Query, Query)
     case union(Query, Query)
-//    case division(Query, Query)
-//    case substraction(Query, Query)
-//    case crossProduct(Query, Query)
+    // difference of l and r, relative complement of r in l
+    case subtraction(Query, Query)
+    // cross product, cross join, cartesian product
+    case product(Query, Query)
+    case division(Query, Query)
 //    case join(Join, Query, Query)
 }
