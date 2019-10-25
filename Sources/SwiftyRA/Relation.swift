@@ -133,8 +133,11 @@ public extension Relation {
         withBinaryQuery(another: another) { lq, rq in .division(lq, rq) }
     }
 
-    func join(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .join(.natural, lq, rq) }
+    func join(with another: Relation, where predicate: ((Query.PredicateContext) throws -> Bool)? = nil) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in
+            predicate.map { .join(.theta($0), lq, rq) }
+                ?? .join(.natural, lq, rq)
+        }
     }
 }
 

@@ -213,6 +213,16 @@ public extension Query {
     }
 
     private func naturalJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        innerJoin(one: one, and: another, on: nil)
+    }
+
+    private func thetaJoin(where predicate: @escaping (Query.PredicateContext) throws -> Bool) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
+        return { one, another in
+            self.innerJoin(one: one, and: another, on: predicate)
+        }
+    }
+
+    private func innerJoin(one: Relation, and another: Relation, on predicate: ((Query.PredicateContext) throws -> Bool)?) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
             let rAttrs = r.header.attributes.map(\.name)
@@ -241,29 +251,34 @@ public extension Query {
             }
             return Header.create(attributes: attributes)
                 .mapError(Relation.Errors.header)
-                .map { header in
-                    let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
-                    let tuples = l.tuples.flatMap { lt in
-                        r.tuples.compactMap { rt -> Tuple? in
-                            let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
-                                acc && lt[attribute] == rt[attribute]
+                .flatMap { header in
+                    do {
+                        let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
+                        let tuples = try l.tuples.flatMap { lt in
+                            try r.tuples.compactMap { rt -> Tuple? in
+                                let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
+                                    acc && lt[attribute] == rt[attribute]
+                                }
+                                let values = lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig })
+                                let result = try predicate?(Query.PredicateContext(values: values)) ?? true
+                                return shouldJoin && result
+                                    ? Tuple(values: values)
+                                    : nil
                             }
-                            return shouldJoin
-                                ? Tuple(values: lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig }))
-                                : nil
                         }
+                        return .success(Relation(header: header, tuples: tuples))
+                    } catch let error as Value.Errors {
+                        return .failure(.value(error))
+                    } catch let error as Query.Errors {
+                        return .failure(.query(error))
+                    } catch let error as Header.Errors {
+                        return .failure(.header(error))
+                    } catch let error as Relation.Errors {
+                        return .failure(error)
+                    } catch {
+                        return .failure(.unknown(error))
                     }
-                    return Relation(header: header, tuples: tuples)
                 }
-        }
-    }
-
-    private func thetaJoin(where predicate: @escaping (Query.PredicateContext) throws -> Bool) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
-        return { one, another in
-            zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-                // TODO: implement me!
-                return .success(one)
-            }
         }
     }
 
