@@ -1,8 +1,11 @@
 public extension Query {
     // TODO: add info about failed operation with path to it?
+    // TODO: should run optimization on each execution step?
     enum Errors: Error {
         /// no such attributes
-        case wrongAttributes(Set<AttributeName>)
+        case unknownAttributes(Set<AttributeName>)
+        /// same name, different types
+        case incompatibleAttributes([(Attribute, Attribute)])
         /// should be equal
         case attributesNotUnionCompatible([Attribute], [Attribute])
         /// should not share common attributes
@@ -23,7 +26,7 @@ public extension Query {
         case let .product(lhs, rhs):              return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(product)
         case let .division(lhs, rhs):             return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(divide)
         case let .join(.natural, lhs, rhs):       return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(naturalJoin)
-        case let .join(.theta, lhs, rhs):         return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(thetaJoin)
+        case let .join(.theta(pred), lhs, rhs):   return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(thetaJoin(where: pred))
         case let .join(.leftOuter, lhs, rhs):     return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(leftOuterJoin)
         case let .join(.rightOuter, lhs, rhs):    return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(rightOuterJoin)
         case let .join(.fullOuter, lhs, rhs):     return zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(fullOuterJoin)
@@ -47,22 +50,24 @@ public extension Query {
                 projectedAttributes.append(attribute)
             }
             guard errors.isEmpty else {
-                return .failure(.query(.wrongAttributes(errors)))
+                return .failure(.query(.unknownAttributes(errors)))
             }
-            return Header.create(attributes: projectedAttributes).mapError(Relation.Errors.header).map { header in
-                let tuples = s.tuples.map { tuple in
-                    Tuple(values: attributes.reduce(into: [:]) { acc, attributeName in
-                        acc[attributeName] = tuple[attributeName, default: .none]
-                    })
+            return Header.create(attributes: projectedAttributes)
+                .mapError(Relation.Errors.header)
+                .map { header in
+                    let tuples = s.tuples.map { tuple in
+                        Tuple(values: attributes.reduce(into: [:]) { acc, attributeName in
+                            acc[attributeName] = tuple[attributeName, default: .none]
+                        })
+                    }
+                    return Relation(header: header, tuples: tuples)
                 }
-                return Relation(header: header, tuples: tuples)
-            }
         }}
     }
 
     private func select(
         from attributes: Set<AttributeName>,
-        where predicate: @escaping (Query.SelectionContext) throws -> Bool
+        where predicate: @escaping (Query.PredicateContext) throws -> Bool
     ) -> (Relation) -> Result<Relation, Relation.Errors> {
         return { r in r.state.flatMap { s in
             var errors: Set<AttributeName> = []
@@ -73,11 +78,11 @@ public extension Query {
                 }
             }
             guard errors.isEmpty else {
-                return .failure(.query(.wrongAttributes(errors)))
+                return .failure(.query(.unknownAttributes(errors)))
             }
             do {
                 let tuples = try s.tuples.filter { tuple in
-                    try predicate(Query.SelectionContext(values: tuple.values.filter { pair in
+                    try predicate(Query.PredicateContext(values: tuple.values.filter { pair in
                         attributes.contains(pair.key)
                     }))
                 }
@@ -99,7 +104,7 @@ public extension Query {
     private func rename(to new: AttributeName, from original: AttributeName) -> (Relation) -> Result<Relation, Relation.Errors> {
         return { r in r.state.flatMap { s in
             guard let originalAttr = s.header[original], let originalIndex = s.header.attributes.firstIndex(of: originalAttr) else {
-                return .failure(.query(.wrongAttributes([original])))
+                return .failure(.query(.unknownAttributes([original])))
             }
             var attributes = s.header.attributes
             attributes[originalIndex] = Attribute(name: new, type: originalAttr.type)
@@ -120,7 +125,7 @@ public extension Query {
         return { r in r.state.flatMap { s in
             let unknownAttributes = Set(attributes.map(\.key)).subtracting(s.header.attributes.map(\.name))
             guard unknownAttributes.isEmpty else {
-                return .failure(.query(.wrongAttributes(unknownAttributes)))
+                return .failure(.query(.unknownAttributes(unknownAttributes)))
             }
             return Result {
                 let tuples = try s.tuples.sorted { lhs, rhs in
@@ -209,15 +214,56 @@ public extension Query {
 
     private func naturalJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
+            let lAttrs = l.header.attributes.map(\.name)
+            let rAttrs = r.header.attributes.map(\.name)
+            let attributeNamesUnion = Set(lAttrs).union(rAttrs)
+            var attributes: [Attribute] = []
+            var errors: [(Attribute, Attribute)] = []
+
+            for attributeName in attributeNamesUnion {
+                switch (l.header[attributeName], r.header[attributeName]) {
+                case let (lhs?, rhs?):
+                    if lhs == rhs {
+                        attributes.append(lhs)
+                    } else {
+                        errors.append((lhs, rhs))
+                    }
+                case let (lhs?, nil):
+                    attributes.append(lhs)
+                case let (nil, rhs?):
+                    attributes.append(rhs)
+                case (nil, nil):
+                    return .failure(.query(.unknownAttributes([attributeName])))
+                }
+            }
+            guard errors.isEmpty else {
+                return .failure(.query(.incompatibleAttributes(errors)))
+            }
+            return Header.create(attributes: attributes)
+                .mapError(Relation.Errors.header)
+                .map { header in
+                    let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
+                    let tuples = l.tuples.flatMap { lt in
+                        r.tuples.compactMap { rt -> Tuple? in
+                            let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
+                                acc && lt[attribute] == rt[attribute]
+                            }
+                            return shouldJoin
+                                ? Tuple(values: lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig }))
+                                : nil
+                        }
+                    }
+                    return Relation(header: header, tuples: tuples)
+                }
         }
     }
 
-    private func thetaJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
+    private func thetaJoin(where predicate: @escaping (Query.PredicateContext) throws -> Bool) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
+        return { one, another in
+            zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+                // TODO: implement me!
+                return .success(one)
+            }
         }
     }
 

@@ -73,6 +73,7 @@ extension Value {
         case let (.integer(l), .integer(r)): return l < r
         case let (.float(l),   .float(r)):   return l < r
 
+        // TODO: idk if this one is legal, probably not...?
         // numbers can be compared by treating integer as a number with floating point
         case let (.float(l),   .integer(r)):   return l < Float(r)
         case let (.integer(l),   .float(r)):   return Float(l) < r

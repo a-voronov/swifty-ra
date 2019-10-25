@@ -7,7 +7,7 @@ final class Reference<Value> {
     }
 }
 
-/// Either type
+/// Either type, that represetnts either one, or another value
 enum Either<A, B> {
     case left(A)
     case right(B)
@@ -22,6 +22,26 @@ extension Either where A == B {
         switch self {
         case let .left(v): return v
         case let .right(v): return v
+        }
+    }
+}
+
+/// These type, that represents either one, or another, or both values
+enum These<A, B> {
+    case this(A)
+    case that(B)
+    case these(A, B)
+}
+
+extension These: Error where A: Error, B: Error {}
+
+extension These {
+    init?(_ a: A?, b: B?) {
+        switch (a, b) {
+        case let (a?, b?): self = .these(a, b)
+        case let (a?, nil): self = .this(a)
+        case let (nil, b?): self = .that(b)
+        case (nil, nil): return nil
         }
     }
 }

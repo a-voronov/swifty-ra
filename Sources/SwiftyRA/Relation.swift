@@ -101,7 +101,7 @@ public extension Relation {
         withUnaryQuery { q in .projection(attributes, q) }
     }
 
-    func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.SelectionContext) throws -> Bool) -> Relation {
+    func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.PredicateContext) throws -> Bool) -> Relation {
         withUnaryQuery { q in .selection(attributes, predicate, q) }
     }
 
@@ -131,6 +131,10 @@ public extension Relation {
 
     func divide(by another: Relation) -> Relation {
         withBinaryQuery(another: another) { lq, rq in .division(lq, rq) }
+    }
+
+    func join(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .join(.natural, lq, rq) }
     }
 }
 

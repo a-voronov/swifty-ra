@@ -200,6 +200,31 @@ final class SwiftyRATests: XCTestCase {
         print(o.tuples.value!)
     }
 
+    func testNaturalJoin() {
+        let r = Relation(
+            header: ["code": .required(.integer), "date": .required(.string), "officer": .required(.integer), "dept": .required(.integer), "registration": .required(.string)],
+            tuples: [
+                [143256, "25/10/1992", 567, 75, "5694 FR"],
+                [987554, "26/10/1992", 456, 75, "5694 FR"],
+                [987557, "26/10/1992", 456, 75, "6544 XY"],
+                [630876, "15/10/1992", 456, 47, "6544 XY"],
+                [539856, "12/10/1992", 567, 47, "6544 XY"]
+            ]
+        )
+        let s = Relation(
+            header: ["registration": .required(.string), "dept": .required(.integer), "owner": .required(.string)],
+            tuples: [
+                ["6544 XY", 75, "Cordon Edouard"],
+                ["7122 HT", 75, "Cordon Edouard"],
+                ["5694 FR", 75, "Latour Hortense"],
+                ["6544 XY", 47, "Mimault Bernard"]
+            ]
+        )
+        let o = r.join(with: s)
+
+        print(o.tuples.value!)
+    }
+
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
@@ -212,5 +237,6 @@ final class SwiftyRATests: XCTestCase {
         ("testSubtraction", testSubtraction),
         ("testProduct", testProduct),
         ("testDivision", testDivision),
+        ("testNaturalJoin", testNaturalJoin),
     ]
 }

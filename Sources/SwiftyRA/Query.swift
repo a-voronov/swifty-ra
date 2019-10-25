@@ -18,7 +18,7 @@ public indirect enum Query {
     /// Context containing values requested by attributes while performing selection query.
     /// Provides dynamic member access via property as well as via usual subscript by name.
     @dynamicMemberLookup
-    public struct SelectionContext {
+    public struct PredicateContext {
         public let values: [AttributeName: Value]
 
         public subscript(name: AttributeName) -> Value? {
@@ -35,8 +35,9 @@ public indirect enum Query {
     }
 
     public enum Join {
+        // if no common attributes = product,
         case natural
-        case theta
+        case theta((PredicateContext) throws -> Bool)
         case leftOuter
         case rightOuter
         case fullOuter
@@ -49,7 +50,7 @@ public indirect enum Query {
 
     case projection(Set<AttributeName>, Query)
     // restriction
-    case selection(Set<AttributeName>, (SelectionContext) throws -> Bool, Query)
+    case selection(Set<AttributeName>, (PredicateContext) throws -> Bool, Query)
     case rename(AttributeName, AttributeName, Query)
     case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
     // case groupBy(???, Query) <- should implement it?
