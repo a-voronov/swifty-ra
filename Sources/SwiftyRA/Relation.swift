@@ -10,7 +10,13 @@ public struct Relation {
         case unknown(Error)
     }
 
-    public typealias State = (header: Header, tuples: Tuples)
+    public struct State: Equatable {
+        public let (header, tuples): (Header, Tuples)
+
+        public init(header: Header, tuples: Tuples) {
+            (self.header, self.tuples) = (header, tuples)
+        }
+    }
 
     private enum InnerState {
         case resolved(Header, Tuples)
@@ -28,7 +34,7 @@ public struct Relation {
         innerState.value.flatMap { s in
             switch s {
             case let .resolved(h, ts):
-                return .success(State(h, ts))
+                return .success(State(header: h, tuples: ts))
             case let .unresolved(q):
                 self.innerState.value = q.optimize().execute().flatMap(\.innerState.value)
 
@@ -104,30 +110,27 @@ public extension Relation {
     }
 
     func intersect(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .intersection(lq, rq) }
+        withBinaryQuery(another: another, transform: Query.intersection)
     }
 
     func union(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .union(lq, rq) }
+        withBinaryQuery(another: another, transform: Query.union)
     }
 
     func subtract(_ another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .subtraction(lq, rq) }
+        withBinaryQuery(another: another, transform: Query.subtraction)
     }
 
     func product(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .product(lq, rq) }
+        withBinaryQuery(another: another, transform: Query.product)
     }
 
     func divide(by another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .division(lq, rq) }
+        withBinaryQuery(another: another, transform: Query.division)
     }
 
     func join(with another: Relation, where predicate: ((Query.PredicateContext) throws -> Bool)? = nil) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in
-            predicate.map { .join(.theta($0), lq, rq) }
-                ?? .join(.natural, lq, rq)
-        }
+        withBinaryQuery(another: another) { lq, rq in .join(predicate.map(Query.Join.theta) ?? .natural, lq, rq) }
     }
 }
 
@@ -141,3 +144,22 @@ public extension Relation {
     }
 }
 
+// MARK: - Equatable
+
+extension Relation.Errors: Equatable {
+    public static func == (lhs: Relation.Errors, rhs: Relation.Errors) -> Bool {
+        switch (lhs, rhs) {
+        case let (.header(l), .header(r)): return l == r
+        case let (.value(l), .value(r)): return l == r
+        case let (.query(l), .query(r)): return l == r
+        case let (.unknown(l), .unknown(r)): return "\(l)" == "\(r)"
+        default: return false
+        }
+    }
+}
+
+extension Relation: Equatable {
+    public static func == (lhs: Relation, rhs: Relation) -> Bool {
+        lhs.state == rhs.state
+    }
+}

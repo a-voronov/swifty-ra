@@ -63,7 +63,7 @@ public extension Value {
 }
 
 extension Value {
-    public enum Errors: Error {
+    public enum Errors: Error, Equatable {
         case incompatible(Value, Value)
     }
 

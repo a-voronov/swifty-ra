@@ -1,11 +1,11 @@
 public extension Query {
     // TODO: add info about failed operation with path to it?
     // TODO: should run optimization on each execution step?
-    enum Errors: Error {
+    enum Errors: Error, Equatable {
         /// no such attributes
         case unknownAttributes(Set<AttributeName>)
         /// same name, different types
-        case incompatibleAttributes([(Attribute, Attribute)])
+        case incompatibleAttributes([Pair<Attribute, Attribute>])
         /// should be equal
         case attributesNotUnionCompatible([Attribute], [Attribute])
         /// should not share common attributes
@@ -235,7 +235,7 @@ public extension Query {
             let rAttrs = r.header.attributes.map(\.name)
             let attributeNamesUnion = Set(lAttrs).union(rAttrs)
             var attributes: [Attribute] = []
-            var errors: [(Attribute, Attribute)] = []
+            var errors: [Pair<Attribute, Attribute>] = []
 
             for attributeName in attributeNamesUnion {
                 switch (l.header[attributeName], r.header[attributeName]) {
@@ -243,7 +243,7 @@ public extension Query {
                     if lhs == rhs {
                         attributes.append(lhs)
                     } else {
-                        errors.append((lhs, rhs))
+                        errors.append(Pair(lhs, rhs))
                     }
                 case let (lhs?, nil):
                     attributes.append(lhs)
