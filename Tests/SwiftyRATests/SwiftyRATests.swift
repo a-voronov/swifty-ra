@@ -149,7 +149,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 28, nil]
             ]
         )
-        let o = r.subtract(from: s)
+        let o = r.subtract(s)
 
         print(o.tuples.value!)
     }
@@ -180,19 +180,22 @@ final class SwiftyRATests: XCTestCase {
 
     func testDivision() {
         let r = Relation(
-            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            header: ["student": .required(.string), "task": .required(.string)],
             tuples: [
-                [1, "Alice", 21, nil],
-                [2, "Bob",   24, "cycling"],
-                [3, "Carol", 19]
+                ["Fred", "Database1"],
+                ["Fred", "Database2"],
+                ["Fred", "Compiler1"],
+                ["Eugene", "Database1"],
+                ["Eugene", "Compiler1"],
+                ["Sarah", "Database1"],
+                ["Sarah", "Database2"]
             ]
         )
         let s = Relation(
-            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            header: ["task": .required(.string)],
             tuples: [
-                [1, "Alice", 21],
-                [2, "Bobby", 24, "cycling"],
-                [3, "Carol", 19, nil]
+                ["Database1"],
+                ["Database2"]
             ]
         )
         let o = r.divide(by: s)

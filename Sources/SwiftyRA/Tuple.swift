@@ -1,5 +1,3 @@
-public typealias Tuples = [Tuple]
-
 /// Stores values by attribute name.
 /// Doesn't preserve values order.
 /// Allows dynamic member access via property as well as via usual subscript by name.

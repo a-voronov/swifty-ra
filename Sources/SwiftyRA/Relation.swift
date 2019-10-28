@@ -53,18 +53,7 @@ public struct Relation {
     /// Invalid Tuples will be just ignored and not added into Relation (make this behvaior configuarble to result in error?).
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) {
         innerState = Reference(Header.create(header).mapError(Relation.Errors.header).flatMap { header in
-            let tuples = tuples.compactMap { tuple -> Tuple? in
-                var valuesPerName: [AttributeName: Value] = [:]
-                for (index, attribute) in header.attributes.enumerated() {
-                    let value = index < tuple.count ? tuple[index] : nil
-                    if value.isMatching(type: attribute.type) {
-                        valuesPerName[attribute.name] = value
-                    } else {
-                        return nil
-                    }
-                }
-                return Tuple(values: valuesPerName)
-            }
+            let tuples = Tuples(attributes: header.attributes, tuples: tuples)
             return .success(.resolved(header, tuples))
         })
     }
@@ -121,7 +110,7 @@ public extension Relation {
         withBinaryQuery(another: another) { lq, rq in .union(lq, rq) }
     }
 
-    func subtract(from another: Relation) -> Relation {
+    func subtract(_ another: Relation) -> Relation {
         withBinaryQuery(another: another) { lq, rq in .subtraction(lq, rq) }
     }
 

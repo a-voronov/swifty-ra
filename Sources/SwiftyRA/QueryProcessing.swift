@@ -150,37 +150,37 @@ public extension Query {
         }}
     }
 
-    private func intersect(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+    private func intersect(_ one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
                 return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
             }
-            let tuples = Array(Set(l.tuples).intersection(r.tuples))
+            let tuples = l.tuples.intersection(r.tuples)
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }
 
-    private func union(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+    private func union(_ one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
                 return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
             }
-            let tuples = Array(Set(l.tuples).union(r.tuples))
+            let tuples = l.tuples.union(r.tuples)
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }
 
-    private func subtract(one: Relation, from another: Relation) -> Result<Relation, Relation.Errors> {
+    private func subtract(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
                 return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
             }
-            let tuples = Array(Set(l.tuples).subtracting(r.tuples))
+            let tuples = l.tuples.subtracting(r.tuples)
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }
 
-    private func product(one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
+    private func product(_ one: Relation, with another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
@@ -200,29 +200,36 @@ public extension Query {
         }
     }
 
-    private func divide(one: Relation, by another: Relation) -> Result<Relation, Relation.Errors> {
+    private func divide(_ one: Relation, by another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
             guard Set(lAttrs).isSuperset(of: rAttrs) else {
                 return .failure(.query(.attributesNotSupersetToAnother(lAttrs, rAttrs)))
             }
-            // TODO: implement me!
-            return .success(one)
+            let uniqueAttributes = Set(Set(lAttrs).subtracting(rAttrs).map(\.name))
+
+            let ur = Query.projection(uniqueAttributes, .relation(one))
+            let t = Query.product(ur, .relation(another))
+            let u = Query.subtraction(t, .relation(one))
+            let v = Query.projection(uniqueAttributes, u)
+            let w = Query.subtraction(ur, v)
+
+            return w.execute()
         }
     }
 
-    private func naturalJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        innerJoin(one: one, and: another, on: nil)
+    private func naturalJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        innerJoin(one, and: another, on: nil)
     }
 
     private func thetaJoin(where predicate: @escaping (Query.PredicateContext) throws -> Bool) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
         return { one, another in
-            self.innerJoin(one: one, and: another, on: predicate)
+            self.innerJoin(one, and: another, on: predicate)
         }
     }
 
-    private func innerJoin(one: Relation, and another: Relation, on predicate: ((Query.PredicateContext) throws -> Bool)?) -> Result<Relation, Relation.Errors> {
+    private func innerJoin(_ one: Relation, and another: Relation, on predicate: ((Query.PredicateContext) throws -> Bool)?) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
             let rAttrs = r.header.attributes.map(\.name)
@@ -255,7 +262,7 @@ public extension Query {
                     do {
                         let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
                         let tuples = try l.tuples.flatMap { lt in
-                            try r.tuples.compactMap { rt -> Tuple? in
+                            try r.tuples.compactMap { rt in
                                 let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
                                     acc && lt[attribute] == rt[attribute]
                                 }
@@ -282,42 +289,42 @@ public extension Query {
         }
     }
 
-    private func leftOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func leftOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }
     }
 
-    private func rightOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func rightOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }
     }
 
-    private func fullOuterJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func fullOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }
     }
 
-    private func leftSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func leftSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }
     }
 
-    private func rightSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func rightSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
         }
     }
 
-    private func antiSemiJoin(one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+    private func antiSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
             return .success(one)
