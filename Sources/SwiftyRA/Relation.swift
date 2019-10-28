@@ -76,14 +76,15 @@ public extension Relation {
             .value ?? self
     }
 
-    // TODO: in case of error in any relation, might it be better to return new relation with that error instead of current one?
     private func withBinaryQuery(another: Relation, transform: (Query, Query) -> Query) -> Relation {
-        zip(innerState.value.map(\.query), another.innerState.value.map(\.query))
-            .mapError(\.value)
-            .map { q, anotherQ in
-                Relation(query: transform(q ?? .relation(self), anotherQ ?? .relation(another)))
-            }
-            .value ?? self
+        switch (innerState.value, another.innerState.value) {
+        case let (.success(l), .success(r)):
+            return Relation(query: transform(l.query ?? .relation(self), r.query ?? .relation(another)))
+        case (.failure, _):
+            return self
+        case (_, .failure):
+            return another
+        }
     }
 
     func project(attributes: Set<AttributeName>) -> Relation {
