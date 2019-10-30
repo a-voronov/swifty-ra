@@ -62,12 +62,13 @@ public extension Value {
     }
 }
 
-extension Value {
-    public enum Errors: Error, Equatable {
+public extension Value {
+    enum Errors: Error, Equatable {
+        case incompatible(Value)
         case incompatible(Value, Value)
     }
 
-    public static func < (lhs: Value, rhs: Value) throws -> Bool {
+    static func < (lhs: Value, rhs: Value) throws -> Bool {
         switch (lhs, rhs) {
         case let (.string(l),  .string(r)):  return l < r
         case let (.integer(l), .integer(r)): return l < r
@@ -92,15 +93,103 @@ extension Value {
         }
     }
 
-    public static func > (lhs: Value, rhs: Value) throws -> Bool {
+    static func > (lhs: Value, rhs: Value) throws -> Bool {
         try rhs < lhs
     }
 
-    public static func >= (lhs: Value, rhs: Value) throws -> Bool {
+    static func >= (lhs: Value, rhs: Value) throws -> Bool {
         try lhs > rhs || lhs == rhs
     }
 
-    public static func <= (lhs: Value, rhs: Value) throws -> Bool {
+    static func <= (lhs: Value, rhs: Value) throws -> Bool {
         try lhs < rhs || lhs == rhs
+    }
+}
+
+public extension Value {
+    private static func numeric(lhs: Value, rhs: Value, int: (Int, Int) -> Int, float: (Float, Float) -> Float) throws -> Value {
+        switch (lhs, rhs) {
+        case let (.integer(l), .integer(r)): return .integer(int(l, r))
+        case let (.float(l),   .float(r)):   return .float(float(l, r))
+
+        default: throw Errors.incompatible(lhs, rhs)
+        }
+    }
+
+    static func + (lhs: Value, rhs: Value) throws -> Value {
+        try numeric(lhs: lhs, rhs: rhs, int: +, float: +)
+    }
+
+    static func - (lhs: Value, rhs: Value) throws -> Value {
+        try numeric(lhs: lhs, rhs: rhs, int: -, float: -)
+    }
+
+    static func * (lhs: Value, rhs: Value) throws -> Value {
+        try numeric(lhs: lhs, rhs: rhs, int: *, float: *)
+    }
+
+    static func / (lhs: Value, rhs: Value) throws -> Value {
+        try numeric(lhs: lhs, rhs: rhs, int: /, float: /)
+    }
+
+    static func % (lhs: Value, rhs: Value) throws -> Value {
+        switch (lhs, rhs) {
+        case let (.integer(l), .integer(r)): return .integer(l % r)
+        default: throw Errors.incompatible(lhs, rhs)
+        }
+    }
+
+    func rounded(_ rule: FloatingPointRoundingRule) throws -> Value {
+        guard case let .float(v) = self else {
+            throw Errors.incompatible(self)
+        }
+        return .float(v.rounded(rule))
+    }
+}
+
+public extension Value {
+    func length() throws -> Value {
+        guard case let .string(v) = self else {
+            throw Errors.incompatible(self)
+        }
+        return .integer(v.count)
+    }
+
+    func lower() throws -> Value {
+        guard case let .string(v) = self else {
+            throw Errors.incompatible(self)
+        }
+        return .string(v.lowercased())
+    }
+
+    func upper() throws -> Value {
+        guard case let .string(v) = self else {
+            throw Errors.incompatible(self)
+        }
+        return .string(v.uppercased())
+    }
+}
+
+public extension Value {
+    private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) throws -> Bool {
+        guard case let (.boolean(l), .boolean(r)) = (lhs, rhs) else {
+            throw Errors.incompatible(lhs, rhs)
+        }
+        return op(l, r)
+    }
+
+    static func && (lhs: Value, rhs: Value) throws -> Bool {
+        try boolean(lhs, rhs) { $0 && $1 }
+    }
+
+    static func || (lhs: Value, rhs: Value) throws -> Bool {
+        try boolean(lhs, rhs) { $0 || $1 }
+    }
+
+    static prefix func ! (a: Value) throws -> Bool {
+        guard case let .boolean(b) = a else {
+            throw Errors.incompatible(a)
+        }
+        return !b
     }
 }
