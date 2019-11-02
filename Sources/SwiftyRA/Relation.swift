@@ -8,7 +8,6 @@ public struct Relation {
         case header(Header.Errors)
         case value(Value.Errors)
         case query(Query.Errors)
-        case unknown(Error)
     }
 
     public struct State: Equatable {
@@ -150,17 +149,7 @@ public extension Relation {
 
 // MARK: - Equatable
 
-extension Relation.Errors: Equatable {
-    public static func == (lhs: Relation.Errors, rhs: Relation.Errors) -> Bool {
-        switch (lhs, rhs) {
-        case let (.header(l), .header(r)): return l == r
-        case let (.value(l), .value(r)): return l == r
-        case let (.query(l), .query(r)): return l == r
-        case let (.unknown(l), .unknown(r)): return "\(l)" == "\(r)"
-        default: return false
-        }
-    }
-}
+extension Relation.Errors: Equatable { }
 
 extension Relation: Equatable {
     public static func == (lhs: Relation, rhs: Relation) -> Bool {
