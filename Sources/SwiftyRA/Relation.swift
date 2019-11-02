@@ -56,8 +56,6 @@ public struct Relation {
         atr(member)
     }
 
-    // TODO: add intiializer with tuples with named values?
-
     /// Preserves header attributes order.
     /// Duplicated attributes will cause error.
     /// Values' order in Tuple should correspond to Header Attributes order, otherwise Tuple will be treated as invalid.
@@ -65,7 +63,14 @@ public struct Relation {
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) {
         innerState = Reference(Header.create(header)
             .mapError(Relation.Errors.header)
-            .map { header in .resolved(header, Tuples(attributes: header.attributes, tuples: tuples)) }
+            .map { header in .resolved(header, Tuples(header: header, tuples: tuples)) }
+        )
+    }
+
+    public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[AttributeName: Value]]) {
+        innerState = Reference(Header.create(header)
+            .mapError(Relation.Errors.header)
+            .map { header in .resolved(header, Tuples(header: header, tuples: tuples)) }
         )
     }
 
@@ -132,8 +137,16 @@ public extension Relation {
         withBinaryQuery(another: another, transform: Query.division)
     }
 
-    func join(with another: Relation, where predicate: Query.Predicate? = nil) -> Relation {
+    func join(with another: Relation, on predicate: Query.Predicate? = nil) -> Relation {
         withBinaryQuery(another: another) { lq, rq in .join(predicate.map(Query.Join.theta) ?? .natural, lq, rq) }
+    }
+
+    func leftSemiJoin(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .join(.leftSemi, lq, rq) }
+    }
+
+    func rightSemiJoin(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .join(.rightSemi, lq, rq) }
     }
 }
 

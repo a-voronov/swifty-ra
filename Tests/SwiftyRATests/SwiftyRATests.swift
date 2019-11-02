@@ -249,7 +249,51 @@ final class SwiftyRATests: XCTestCase {
                 ["6544 XY", 470, "Mimault Bernard"]
             ]
         )
-        let o = r.join(with: s, where: r.officer > r.dept)
+        let o = r.join(with: s, on: r.officer > r.dept)
+
+        print(o.tuples.value!)
+    }
+
+    func testLeftSemiJoin() {
+        let r = Relation(
+            header: ["Name": .required(.string), "EmpId": .required(.integer), "DeptName": .required(.string)],
+            tuples: [
+                ["Harry", 3415, "Finance"],
+                ["Sally", 2241, "Sales"],
+                ["George", 3401, "Finance"],
+                ["Harriet", 2202, "Production"]
+            ]
+        )
+        let s = Relation(
+            header: ["DeptName": .required(.string), "Manager": .required(.string)],
+            tuples: [
+                ["Sales", "Sally"],
+                ["Production", "Harriet"]
+            ]
+        )
+        let o = r.leftSemiJoin(with: s)
+
+        print(o.tuples.value!)
+    }
+
+    func testRightSemiJoin() {
+        let r = Relation(
+            header: ["Name": .required(.string), "EmpId": .required(.integer), "DeptName": .required(.string)],
+            tuples: [
+                ["Harry", 3415, "Finance"],
+                ["Sally", 2241, "Sales"],
+                ["George", 3401, "Finance"],
+                ["Harriet", 2202, "Production"]
+            ]
+        )
+        let s = Relation(
+            header: ["DeptName": .required(.string), "Manager": .required(.string)],
+            tuples: [
+                ["Sales", "Sally"],
+                ["Production", "Harriet"]
+            ]
+        )
+        let o = r.rightSemiJoin(with: s)
 
         print(o.tuples.value!)
     }
@@ -268,5 +312,7 @@ final class SwiftyRATests: XCTestCase {
         ("testDivision", testDivision),
         ("testNaturalJoin", testNaturalJoin),
         ("testThetaJoin", testThetaJoin),
+        ("testLeftSemiJoin", testLeftSemiJoin),
+        ("testRightSemiJoin", testRightSemiJoin)
     ]
 }

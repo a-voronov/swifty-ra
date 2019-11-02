@@ -242,6 +242,7 @@ public extension Query {
                 case let (nil, rhs?):
                     attributes.append(rhs)
                 case (nil, nil):
+                    // this case won't happen, as attributes are taken from both headers only, but we need to satisfy compiler
                     return .failure(.query(.unknownAttributes([attributeName])))
                 }
             }
@@ -270,6 +271,24 @@ public extension Query {
         }
     }
 
+    private func leftSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            let lAttrs = l.header.attributes.map(\.name)
+            return Query.projection(Set(lAttrs), .join(.natural, .relation(one), .relation(another))).execute()
+        }
+    }
+
+    private func rightSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        leftSemiJoin(another, and: one)
+    }
+
+    private func antiSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+            // TODO: implement me!
+            return .success(one)
+        }
+    }
+
     private func leftOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             // TODO: implement me!
@@ -290,26 +309,4 @@ public extension Query {
             return .success(one)
         }
     }
-
-    private func leftSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
-
-    private func rightSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
-
-    private func antiSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
 }
-
