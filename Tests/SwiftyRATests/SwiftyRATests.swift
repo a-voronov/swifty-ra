@@ -2,6 +2,7 @@ import XCTest
 @testable import SwiftyRA
 
 final class SwiftyRATests: XCTestCase {
+    
     func testProjection() {
         let r = Relation(
             header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
@@ -27,21 +28,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let s = r.select(from: ["age", "hobby"], where: { ctx in try ctx.age > 20 && ctx.hobby.hasValue })
-
-        print(s.tuples.value!)
-    }
-
-    func testSelectionWithPredicate() {
-        let r = Relation(
-            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
-            tuples: [
-                [1, "Alice", 21, nil],
-                [2, "Bob",   24, "cycling"],
-                [3, "Carol", 19]
-            ]
-        )
-        let s = r.select(age: .gt(.value(20)), hobby: .neq(.value(nil)))
+        let s = r.select(where: r.age > 20 && r.hobby != nil)
 
         print(s.tuples.value!)
     }
@@ -248,7 +235,7 @@ final class SwiftyRATests: XCTestCase {
                 ["6544 XY", 470, "Mimault Bernard"]
             ]
         )
-        let o = r.join(with: s, where: { ctx in try ctx.officer > ctx.dept })
+        let o = r.join(with: s, where: r.officer > r.dept)
 
         print(o.tuples.value!)
     }
@@ -256,7 +243,6 @@ final class SwiftyRATests: XCTestCase {
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
-        ("testSelectionWithPredicate", testSelectionWithPredicate),
         ("testRenaming",  testRenaming),
         ("testOrdering",  testOrdering),
         ("testOrderingWithPredicate", testOrderingWithPredicate),

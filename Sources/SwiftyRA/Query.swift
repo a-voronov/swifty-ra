@@ -18,7 +18,7 @@ public indirect enum Query {
     public enum Join {
         // if no common attributes = product,
         case natural
-        case theta((Predicate.Context) throws -> Bool)
+        case theta(Predicate)
         case leftOuter
         case rightOuter
         case fullOuter
@@ -31,7 +31,7 @@ public indirect enum Query {
 
     case projection(Set<AttributeName>, Query)
     // restriction
-    case selection(Set<AttributeName>, (Predicate.Context) throws -> Bool, Query)
+    case selection(Predicate, Query)
     case rename(AttributeName, AttributeName, Query)
     case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
     // case groupBy(???, Query) <- should implement it?

@@ -30,24 +30,24 @@ public extension Query {
 
     func execute() -> Result<Relation, Relation.Errors> {
         switch self {
-        case let .projection(attrs, q):           return applyUnary(q, project(attributes: attrs))
-        case let .selection(attrs, predicate, q): return applyUnary(q, select(from: attrs, where: predicate))
-        case let .rename(to, from, q):            return applyUnary(q, rename(to: to, from: from))
-        case let .orderBy(attrs, q):              return applyUnary(q, orderBy(attributes: attrs))
-        case let .intersection(lhs, rhs):         return applyBinary(lhs, rhs, intersect)
-        case let .union(lhs, rhs):                return applyBinary(lhs, rhs, union)
-        case let .subtraction(lhs, rhs):          return applyBinary(lhs, rhs, subtract)
-        case let .product(lhs, rhs):              return applyBinary(lhs, rhs, product)
-        case let .division(lhs, rhs):             return applyBinary(lhs, rhs, divide)
-        case let .join(.natural, lhs, rhs):       return applyBinary(lhs, rhs, naturalJoin)
-        case let .join(.theta(pred), lhs, rhs):   return applyBinary(lhs, rhs, thetaJoin(where: pred))
-        case let .join(.leftOuter, lhs, rhs):     return applyBinary(lhs, rhs, leftOuterJoin)
-        case let .join(.rightOuter, lhs, rhs):    return applyBinary(lhs, rhs, rightOuterJoin)
-        case let .join(.fullOuter, lhs, rhs):     return applyBinary(lhs, rhs, fullOuterJoin)
-        case let .join(.leftSemi, lhs, rhs):      return applyBinary(lhs, rhs, leftSemiJoin)
-        case let .join(.rightSemi, lhs, rhs):     return applyBinary(lhs, rhs, rightSemiJoin)
-        case let .join(.antiSemi, lhs, rhs):      return applyBinary(lhs, rhs, antiSemiJoin)
-        case let .relation(r):                    return .success(r)
+        case let .projection(attrs, q):        return applyUnary(q, project(attributes: attrs))
+        case let .selection(predicate, q):     return applyUnary(q, select(where: predicate))
+        case let .rename(to, from, q):         return applyUnary(q, rename(to: to, from: from))
+        case let .orderBy(attrs, q):           return applyUnary(q, orderBy(attributes: attrs))
+        case let .intersection(lhs, rhs):      return applyBinary(lhs, rhs, intersect)
+        case let .union(lhs, rhs):             return applyBinary(lhs, rhs, union)
+        case let .subtraction(lhs, rhs):       return applyBinary(lhs, rhs, subtract)
+        case let .product(lhs, rhs):           return applyBinary(lhs, rhs, product)
+        case let .division(lhs, rhs):          return applyBinary(lhs, rhs, divide)
+        case let .join(.natural, lhs, rhs):    return applyBinary(lhs, rhs, naturalJoin)
+        case let .join(.theta(p), lhs, rhs):   return applyBinary(lhs, rhs, thetaJoin(where: p))
+        case let .join(.leftOuter, lhs, rhs):  return applyBinary(lhs, rhs, leftOuterJoin)
+        case let .join(.rightOuter, lhs, rhs): return applyBinary(lhs, rhs, rightOuterJoin)
+        case let .join(.fullOuter, lhs, rhs):  return applyBinary(lhs, rhs, fullOuterJoin)
+        case let .join(.leftSemi, lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
+        case let .join(.rightSemi, lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
+        case let .join(.antiSemi, lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
+        case let .relation(r):                 return .success(r)
         }
     }
 
@@ -79,39 +79,17 @@ public extension Query {
         }}
     }
 
-    private func select(
-        from attributes: Set<AttributeName>,
-        where predicate: @escaping (Query.Predicate.Context) throws -> Bool
-    ) -> (Relation) -> Result<Relation, Relation.Errors> {
+    private func select(where predicate: Query.Predicate) -> (Relation) -> Result<Relation, Relation.Errors> {
         return { r in r.state.flatMap { s in
-            var errors: Set<AttributeName> = []
-
-            for attribute in attributes {
-                if s.header[attribute] == nil {
-                    errors.insert(attribute)
-                }
-            }
+            let errors = predicate.attributes.subtracting(s.header.attributes.map(\.name))
             guard errors.isEmpty else {
                 return .failure(.query(.unknownAttributes(errors)))
             }
-            do {
-                let tuples = try s.tuples.filter { tuple in
-                    try predicate(Query.Predicate.Context(values: tuple.values.filter { pair in
-                        attributes.contains(pair.key)
-                    }))
-                }
-                return .success(Relation(header: s.header, tuples: tuples))
-            } catch let error as Value.Errors {
-                return .failure(.value(error))
-            } catch let error as Query.Errors {
-                return .failure(.query(error))
-            } catch let error as Header.Errors {
-                return .failure(.header(error))
-            } catch let error as Relation.Errors {
-                return .failure(error)
-            } catch {
-                return .failure(.unknown(error))
-            }
+            return s.tuples
+                .filter { predicate.eval(Query.Predicate.Context(values: $0.values)) }
+                .mapError(Query.Errors.predicate)
+                .mapError(Relation.Errors.query)
+                .map { Relation(header: s.header, tuples: $0) }
         }}
     }
 
@@ -237,13 +215,13 @@ public extension Query {
         innerJoin(one, and: another, on: nil)
     }
 
-    private func thetaJoin(where predicate: @escaping (Query.Predicate.Context) throws -> Bool) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
+    private func thetaJoin(where predicate: Query.Predicate) -> (Relation, Relation) -> Result<Relation, Relation.Errors> {
         return { one, another in
             self.innerJoin(one, and: another, on: predicate)
         }
     }
 
-    private func innerJoin(_ one: Relation, and another: Relation, on predicate: ((Query.Predicate.Context) throws -> Bool)?) -> Result<Relation, Relation.Errors> {
+    private func innerJoin(_ one: Relation, and another: Relation, on predicate: Query.Predicate?) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
             let rAttrs = r.header.attributes.map(\.name)
@@ -273,32 +251,21 @@ public extension Query {
             return Header.create(attributes: attributes)
                 .mapError(Relation.Errors.header)
                 .flatMap { header in
-                    do {
-                        let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
-                        let tuples = try l.tuples.flatMap { lt in
-                            try r.tuples.compactMap { rt in
-                                let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
-                                    acc && lt[attribute] == rt[attribute]
-                                }
-                                let values = lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig })
-                                let result = try predicate?(Query.Predicate.Context(values: values)) ?? true
-                                return shouldJoin && result
-                                    ? Tuple(values: values)
-                                    : nil
+                    let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
+                    let tuples = l.tuples.flatMap { lt in
+                        r.tuples.compactMap { rt -> Result<Tuple?, Relation.Errors> in
+                            let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
+                                acc && lt[attribute] == rt[attribute]
                             }
+                            let values = lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig })
+                            let result = predicate?.eval(Query.Predicate.Context(values: values)) ?? .success(true)
+                            return result
+                                .mapError(Query.Errors.predicate)
+                                .mapError(Relation.Errors.query)
+                                .map { res in shouldJoin && res ? Tuple(values: values) : nil }
                         }
-                        return .success(Relation(header: header, tuples: tuples))
-                    } catch let error as Value.Errors {
-                        return .failure(.value(error))
-                    } catch let error as Query.Errors {
-                        return .failure(.query(error))
-                    } catch let error as Header.Errors {
-                        return .failure(.header(error))
-                    } catch let error as Relation.Errors {
-                        return .failure(error)
-                    } catch {
-                        return .failure(.unknown(error))
                     }
+                    return tuples.map { Relation(header: header, tuples: $0) }
                 }
         }
     }

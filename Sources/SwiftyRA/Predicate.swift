@@ -63,10 +63,72 @@ extension Query {
         case not(Predicate)
 
         case eq(Operators)
+        case neq(Operators)
         case gt(Operators)
         case lt(Operators)
         case ge(Operators)
         case le(Operators)
+    }
+}
+
+extension Query.Predicate {
+    var attributes: Set<AttributeName> {
+        switch self {
+        case let .member(member): return member.attributes
+        case let .and(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .or(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .not(p): return p.attributes
+        case let .eq(op): return op.attributes
+        case let .neq(op): return op.attributes
+        case let .gt(op): return op.attributes
+        case let .lt(op): return op.attributes
+        case let .ge(op): return op.attributes
+        case let .le(op): return op.attributes
+        }
+    }
+}
+
+extension Query.Predicate.Member {
+    var attributes: Set<AttributeName> {
+        switch self {
+        case .atr(let a): return [a]
+        case .val: return []
+        }
+    }
+}
+
+extension Query.Predicate.Operators {
+    var attributes: Set<AttributeName> {
+        switch self {
+        case let .any(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .numbers(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .strings(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        }
+    }
+}
+
+extension Query.Predicate.NumericOperation {
+    var attributes: Set<AttributeName> {
+        switch self {
+        case let .member(member): return member.attributes
+        case let .add(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .sub(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .mul(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .div(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .mod(lhs, rhs): return lhs.attributes.union(rhs.attributes)
+        case let .round(_, op): return op.attributes
+        case let .length(op): return op.attributes
+        }
+    }
+}
+
+extension Query.Predicate.StringOperation {
+    var attributes: Set<AttributeName> {
+        switch self {
+        case let .member(member): return member.attributes
+        case let .lower(op): return op.attributes
+        case let .upper(op): return op.attributes
+        }
     }
 }
 
@@ -110,12 +172,13 @@ public extension Query.Predicate {
         case let .and(lhs, rhs): return applyBinary(lhs, rhs, ctx) { $0 && $1 }
         case let .or(lhs, rhs):  return applyBinary(lhs, rhs, ctx) { $0 || $1 }
 
-        case let .not(op): return op.eval(ctx).map(!)
-        case let .eq(ops): return ops.eval(ctx).map(==)
-        case let .gt(ops): return ops.eval(ctx).flatMap(apply(>))
-        case let .lt(ops): return ops.eval(ctx).flatMap(apply(<))
-        case let .ge(ops): return ops.eval(ctx).flatMap(apply(>=))
-        case let .le(ops): return ops.eval(ctx).flatMap(apply(<=))
+        case let .not(op):  return op.eval(ctx).map(!)
+        case let .eq(ops):  return ops.eval(ctx).map(==)
+        case let .neq(ops): return ops.eval(ctx).map(!=)
+        case let .gt(ops):  return ops.eval(ctx).flatMap(apply(>))
+        case let .lt(ops):  return ops.eval(ctx).flatMap(apply(<))
+        case let .ge(ops):  return ops.eval(ctx).flatMap(apply(>=))
+        case let .le(ops):  return ops.eval(ctx).flatMap(apply(<=))
         }
     }
 }
@@ -188,23 +251,26 @@ public extension Query.Predicate.Member {
     func and(_ another: Query.Predicate.Member) -> Query.Predicate { .and(.member(self), .member(another)) }
     func or(_ another: Query.Predicate.Member) -> Query.Predicate  { .or(.member(self), .member(another)) }
 
-    func eq(_ another: Query.Predicate.Member) -> Query.Predicate { .eq(.any(self, another)) }
-    func gt(_ another: Query.Predicate.Member) -> Query.Predicate { .gt(.any(self, another)) }
-    func lt(_ another: Query.Predicate.Member) -> Query.Predicate { .lt(.any(self, another)) }
-    func ge(_ another: Query.Predicate.Member) -> Query.Predicate { .ge(.any(self, another)) }
-    func le(_ another: Query.Predicate.Member) -> Query.Predicate { .le(.any(self, another)) }
+    func eq(_ another: Query.Predicate.Member) -> Query.Predicate  { .eq(.any(self, another)) }
+    func neq(_ another: Query.Predicate.Member) -> Query.Predicate { .neq(.any(self, another)) }
+    func gt(_ another: Query.Predicate.Member) -> Query.Predicate  { .gt(.any(self, another)) }
+    func lt(_ another: Query.Predicate.Member) -> Query.Predicate  { .lt(.any(self, another)) }
+    func ge(_ another: Query.Predicate.Member) -> Query.Predicate  { .ge(.any(self, another)) }
+    func le(_ another: Query.Predicate.Member) -> Query.Predicate  { .le(.any(self, another)) }
 
-    func eq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .eq(.numbers(.member(self), another)) }
-    func gt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .gt(.numbers(.member(self), another)) }
-    func lt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .lt(.numbers(.member(self), another)) }
-    func ge(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .ge(.numbers(.member(self), another)) }
-    func le(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .le(.numbers(.member(self), another)) }
+    func eq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .eq(.numbers(.member(self), another)) }
+    func neq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .neq(.numbers(.member(self), another)) }
+    func gt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .gt(.numbers(.member(self), another)) }
+    func lt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .lt(.numbers(.member(self), another)) }
+    func ge(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .ge(.numbers(.member(self), another)) }
+    func le(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .le(.numbers(.member(self), another)) }
 
-    func eq(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .eq(.strings(.member(self), another)) }
-    func gt(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .gt(.strings(.member(self), another)) }
-    func lt(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .lt(.strings(.member(self), another)) }
-    func ge(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .ge(.strings(.member(self), another)) }
-    func le(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .le(.strings(.member(self), another)) }
+    func eq(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .eq(.strings(.member(self), another)) }
+    func neq(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .neq(.strings(.member(self), another)) }
+    func gt(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .gt(.strings(.member(self), another)) }
+    func lt(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .lt(.strings(.member(self), another)) }
+    func ge(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .ge(.strings(.member(self), another)) }
+    func le(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .le(.strings(.member(self), another)) }
 
     func add(_ another: Query.Predicate.Member) -> Query.Predicate.NumericOperation { .add(.member(self), .member(another)) }
     func sub(_ another: Query.Predicate.Member) -> Query.Predicate.NumericOperation { .sub(.member(self), .member(another)) }
@@ -237,6 +303,10 @@ public extension Query.Predicate.Member {
     static func == (lhs: Query.Predicate.Member, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.eq(rhs) }
     static func == (lhs: Query.Predicate.Member, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.eq(rhs) }
     static func == (lhs: Query.Predicate.Member, rhs: Query.Predicate.StringOperation) -> Query.Predicate { lhs.eq(rhs) }
+
+    static func != (lhs: Query.Predicate.Member, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.neq(rhs) }
+    static func != (lhs: Query.Predicate.Member, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.neq(rhs) }
+    static func != (lhs: Query.Predicate.Member, rhs: Query.Predicate.StringOperation) -> Query.Predicate { lhs.neq(rhs) }
 
     static func > (lhs: Query.Predicate.Member, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.gt(rhs) }
     static func > (lhs: Query.Predicate.Member, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.gt(rhs) }
@@ -285,20 +355,25 @@ public extension Query.Predicate.NumericOperation {
 
     func round(_ rule: FloatingPointRoundingRule) -> Query.Predicate.NumericOperation { .round(rule, self) }
 
-    func eq(_ another: Query.Predicate.Member) -> Query.Predicate { .eq(.numbers(self, .member(another))) }
-    func gt(_ another: Query.Predicate.Member) -> Query.Predicate { .gt(.numbers(self, .member(another))) }
-    func lt(_ another: Query.Predicate.Member) -> Query.Predicate { .lt(.numbers(self, .member(another))) }
-    func ge(_ another: Query.Predicate.Member) -> Query.Predicate { .ge(.numbers(self, .member(another))) }
-    func le(_ another: Query.Predicate.Member) -> Query.Predicate { .le(.numbers(self, .member(another))) }
+    func eq(_ another: Query.Predicate.Member) -> Query.Predicate  { .eq(.numbers(self, .member(another))) }
+    func neq(_ another: Query.Predicate.Member) -> Query.Predicate { .neq(.numbers(self, .member(another))) }
+    func gt(_ another: Query.Predicate.Member) -> Query.Predicate  { .gt(.numbers(self, .member(another))) }
+    func lt(_ another: Query.Predicate.Member) -> Query.Predicate  { .lt(.numbers(self, .member(another))) }
+    func ge(_ another: Query.Predicate.Member) -> Query.Predicate  { .ge(.numbers(self, .member(another))) }
+    func le(_ another: Query.Predicate.Member) -> Query.Predicate  { .le(.numbers(self, .member(another))) }
 
-    func eq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .eq(.numbers(self, another)) }
-    func gt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .gt(.numbers(self, another)) }
-    func lt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .lt(.numbers(self, another)) }
-    func ge(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .ge(.numbers(self, another)) }
-    func le(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .le(.numbers(self, another)) }
+    func eq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .eq(.numbers(self, another)) }
+    func neq(_ another: Query.Predicate.NumericOperation) -> Query.Predicate { .neq(.numbers(self, another)) }
+    func gt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .gt(.numbers(self, another)) }
+    func lt(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .lt(.numbers(self, another)) }
+    func ge(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .ge(.numbers(self, another)) }
+    func le(_ another: Query.Predicate.NumericOperation) -> Query.Predicate  { .le(.numbers(self, another)) }
 
     static func == (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.eq(rhs) }
     static func == (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.eq(rhs) }
+
+    static func != (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.neq(rhs) }
+    static func != (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.neq(rhs) }
 
     static func > (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.gt(rhs) }
     static func > (lhs: Query.Predicate.NumericOperation, rhs: Query.Predicate.NumericOperation) -> Query.Predicate { lhs.gt(rhs) }
@@ -334,20 +409,25 @@ public extension Query.Predicate.StringOperation {
 
     func length() -> Query.Predicate.NumericOperation { .length(self) }
 
-    func eq(_ another: Query.Predicate.Member) -> Query.Predicate { .eq(.strings(self, .member(another))) }
-    func gt(_ another: Query.Predicate.Member) -> Query.Predicate { .gt(.strings(self, .member(another))) }
-    func lt(_ another: Query.Predicate.Member) -> Query.Predicate { .lt(.strings(self, .member(another))) }
-    func ge(_ another: Query.Predicate.Member) -> Query.Predicate { .ge(.strings(self, .member(another))) }
-    func le(_ another: Query.Predicate.Member) -> Query.Predicate { .le(.strings(self, .member(another))) }
+    func eq(_ another: Query.Predicate.Member) -> Query.Predicate  { .eq(.strings(self, .member(another))) }
+    func neq(_ another: Query.Predicate.Member) -> Query.Predicate { .neq(.strings(self, .member(another))) }
+    func gt(_ another: Query.Predicate.Member) -> Query.Predicate  { .gt(.strings(self, .member(another))) }
+    func lt(_ another: Query.Predicate.Member) -> Query.Predicate  { .lt(.strings(self, .member(another))) }
+    func ge(_ another: Query.Predicate.Member) -> Query.Predicate  { .ge(.strings(self, .member(another))) }
+    func le(_ another: Query.Predicate.Member) -> Query.Predicate  { .le(.strings(self, .member(another))) }
 
-    func eq(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .eq(.strings(self, another)) }
-    func gt(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .gt(.strings(self, another)) }
-    func lt(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .lt(.strings(self, another)) }
-    func ge(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .ge(.strings(self, another)) }
-    func le(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .le(.strings(self, another)) }
+    func eq(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .eq(.strings(self, another)) }
+    func neq(_ another: Query.Predicate.StringOperation) -> Query.Predicate { .neq(.strings(self, another)) }
+    func gt(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .gt(.strings(self, another)) }
+    func lt(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .lt(.strings(self, another)) }
+    func ge(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .ge(.strings(self, another)) }
+    func le(_ another: Query.Predicate.StringOperation) -> Query.Predicate  { .le(.strings(self, another)) }
 
     static func == (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.eq(rhs) }
     static func == (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.StringOperation) -> Query.Predicate { lhs.eq(rhs) }
+
+    static func != (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.neq(rhs) }
+    static func != (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.StringOperation) -> Query.Predicate { lhs.neq(rhs) }
 
     static func > (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.Member) -> Query.Predicate { lhs.gt(rhs) }
     static func > (lhs: Query.Predicate.StringOperation, rhs: Query.Predicate.StringOperation) -> Query.Predicate { lhs.gt(rhs) }
@@ -381,3 +461,9 @@ public extension Query.Predicate {
 
 public func atr(_ atr: AttributeName) -> Query.Predicate.Member { .atr(atr) }
 public func val(_ val: Value) -> Query.Predicate.Member         { .val(val) }
+
+extension Query.Predicate.Member: ExpressibleByBooleanLiteral { public init(booleanLiteral value: Bool)  { self = .val(Value(booleanLiteral: value)) } }
+extension Query.Predicate.Member: ExpressibleByStringLiteral  { public init(stringLiteral value: String) { self = .val(Value(stringLiteral: value))  } }
+extension Query.Predicate.Member: ExpressibleByIntegerLiteral { public init(integerLiteral value: Int)   { self = .val(Value(integerLiteral: value)) } }
+extension Query.Predicate.Member: ExpressibleByFloatLiteral   { public init(floatLiteral value: Float)   { self = .val(Value(floatLiteral: value))   } }
+extension Query.Predicate.Member: ExpressibleByNilLiteral     { public init(nilLiteral: ())              { self = .val(Value(nilLiteral: ()))        } }

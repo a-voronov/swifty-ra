@@ -2,6 +2,7 @@
 /// Stores tuples with values.
 /// Can be either in sucess or failure state. Can't restore from the failure state. Can fail from the success state.
 /// Allows performing Relational Algebra lazily. Actual query will be executed when accessing `state` or `header` or `tuples` values.
+@dynamicMemberLookup
 public struct Relation {
     public enum Errors: Error {
         case header(Header.Errors)
@@ -13,7 +14,7 @@ public struct Relation {
     public struct State: Equatable {
         public let (header, tuples): (Header, Tuples)
 
-        public init(header: Header, tuples: Tuples) {
+        init(header: Header, tuples: Tuples) {
             (self.header, self.tuples) = (header, tuples)
         }
     }
@@ -51,6 +52,11 @@ public struct Relation {
         state.map(\.tuples)
     }
 
+    // TODO: not yet sure if it's a good idea, but definitely looks nice with predicate :)
+    public subscript(dynamicMember member: AttributeName) -> Query.Predicate.Member {
+        atr(member)
+    }
+
     // TODO: add intiializer with tuples with named values?
 
     /// Preserves header attributes order.
@@ -58,10 +64,10 @@ public struct Relation {
     /// Values' order in Tuple should correspond to Header Attributes order, otherwise Tuple will be treated as invalid.
     /// Invalid Tuples will be just ignored and not added into Relation (make this behvaior configuarble to result in error?).
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) {
-        innerState = Reference(Header.create(header).mapError(Relation.Errors.header).flatMap { header in
-            let tuples = Tuples(attributes: header.attributes, tuples: tuples)
-            return .success(.resolved(header, tuples))
-        })
+        innerState = Reference(Header.create(header)
+            .mapError(Relation.Errors.header)
+            .map { header in .resolved(header, Tuples(attributes: header.attributes, tuples: tuples)) }
+        )
     }
 
     init(header: Header, tuples: Tuples) {
@@ -76,9 +82,7 @@ public struct Relation {
 public extension Relation {
     private func withUnaryQuery(_ transform: (Query) -> Query) -> Relation {
         innerState.value.map(\.query)
-            .map { q in
-                Relation(query: transform(q ?? .relation(self)))
-            }
+            .map { q in Relation(query: transform(q ?? .relation(self))) }
             .value ?? self
     }
 
@@ -97,8 +101,8 @@ public extension Relation {
         withUnaryQuery { q in .projection(attributes, q) }
     }
 
-    func select(from attributes: Set<AttributeName>, where predicate: @escaping (Query.Predicate.Context) throws -> Bool) -> Relation {
-        withUnaryQuery { q in .selection(attributes, predicate, q) }
+    func select(where predicate: Query.Predicate) -> Relation {
+        withUnaryQuery { q in .selection(predicate, q) }
     }
 
     func rename(to newAttribute: AttributeName, from originalAttribute: AttributeName) -> Relation {
@@ -129,15 +133,15 @@ public extension Relation {
         withBinaryQuery(another: another, transform: Query.division)
     }
 
-    func join(with another: Relation, where predicate: ((Query.Predicate.Context) throws -> Bool)? = nil) -> Relation {
+    func join(with another: Relation, where predicate: Query.Predicate? = nil) -> Relation {
         withBinaryQuery(another: another) { lq, rq in .join(predicate.map(Query.Join.theta) ?? .natural, lq, rq) }
     }
 }
 
 public extension Relation {
-    var select: Selection {
-        Selection(relation: self)
-    }
+//    var select: Selection {
+//        Selection(relation: self)
+//    }
 
     var order: Ordering {
         Ordering(relation: self)

@@ -84,6 +84,21 @@ public struct Tuples {
         return ts
     }
 
+    public func filter<E: Error>(_ isIncluded: (Tuple) -> Result<Bool, E>) -> Result<Tuples, E> {
+        var ts = Tuples()
+        for element in ary {
+            switch isIncluded(element) {
+            case let .success(passed):
+                if passed {
+                    ts.insert(element)
+                }
+            case let .failure(error):
+                return .failure(error)
+            }
+        }
+        return .success(ts)
+    }
+
     public func sorted(by areInIncreasingOrder: (Tuple, Tuple) throws -> Bool) rethrows -> Tuples {
         try updating(self) { try $0.sort(by: areInIncreasingOrder) }
     }
@@ -124,6 +139,49 @@ extension Tuples {
             }
         }
         return ts
+    }
+}
+
+extension Tuples {
+    func map<E: Error>(_ transform: (Tuple) -> Result<Tuple, E>) -> Result<Tuples, E> {
+        var tuples = Tuples()
+        for element in ary {
+            switch transform(element) {
+            case let .success(tuple): tuples.insert(tuple)
+            case let .failure(error): return .failure(error)
+            }
+        }
+        return .success(tuples)
+    }
+
+    func flatMap<E: Error>(_ transform: (Tuple) -> Result<Tuples, E>) -> Result<Tuples, E> {
+        var tuples = Tuples()
+        for element in ary {
+            switch transform(element) {
+            case let .success(ts):
+                ts.forEach { tuple in
+                    tuples.insert(tuple)
+                }
+            case let .failure(error):
+                return .failure(error)
+            }
+        }
+        return .success(tuples)
+    }
+
+    func compactMap<E: Error>(_ transform: (Tuple) -> Result<Tuple?, E>) -> Result<Tuples, E> {
+        var tuples = Tuples()
+        for element in ary {
+            switch transform(element) {
+            case let .success(tuple):
+                if let tuple = tuple {
+                    tuples.insert(tuple)
+                }
+            case let .failure(error):
+                return .failure(error)
+            }
+        }
+        return .success(tuples)
     }
 }
 
