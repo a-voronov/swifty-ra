@@ -33,6 +33,20 @@ final class SwiftyRATests: XCTestCase {
         print(s.tuples.value!)
     }
 
+    func testSelectionDynamicCall() {
+        let r = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
+        let s = r.select(name: "Bob", age: 24)
+
+        print(s.tuples.value!)
+    }
+
     func testRenaming() {
         let r = Relation(
             header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
@@ -61,7 +75,7 @@ final class SwiftyRATests: XCTestCase {
         print(s.tuples.value!)
     }
 
-    func testOrderingWithPredicate() {
+    func testOrderingDynamicCall() {
         let r = Relation(
             header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
             tuples: [
@@ -243,9 +257,10 @@ final class SwiftyRATests: XCTestCase {
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
+        ("testSelectionDynamicCall",  testSelectionDynamicCall),
         ("testRenaming",  testRenaming),
         ("testOrdering",  testOrdering),
-        ("testOrderingWithPredicate", testOrderingWithPredicate),
+        ("testOrderingDynamicCall", testOrderingDynamicCall),
         ("testIntersection", testIntersection),
         ("testUnion", testUnion),
         ("testSubtraction", testSubtraction),

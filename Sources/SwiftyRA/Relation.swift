@@ -139,9 +139,9 @@ public extension Relation {
 }
 
 public extension Relation {
-//    var select: Selection {
-//        Selection(relation: self)
-//    }
+    var select: Selection {
+        Selection(relation: self)
+    }
 
     var order: Ordering {
         Ordering(relation: self)
