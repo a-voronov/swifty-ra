@@ -3,8 +3,8 @@
 /// Emmits only `Header.Error` errors.
 /// Provides dynamic member access via property as well as via usual subscript by name.
 @dynamicMemberLookup
-public struct Header: Hashable {
-    public enum Errors: Error, Equatable {
+public struct Header {
+    public enum Errors: Error, Hashable {
         case empty
         case duplicates(Set<AttributeName>)
     }
@@ -48,6 +48,16 @@ public struct Header: Hashable {
 
     public subscript(dynamicMember member: AttributeName) -> Attribute? {
         self[member]
+    }
+}
+
+extension Header: Hashable {
+    public static func == (lhs: Header, rhs: Header) -> Bool {
+        lhs.attributesByName == rhs.attributesByName
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        attributesByName.hash(into: &hasher)
     }
 }
 

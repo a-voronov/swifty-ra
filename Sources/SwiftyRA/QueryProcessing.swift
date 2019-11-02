@@ -1,7 +1,7 @@
 public extension Query {
     // TODO: add info about failed operation with path to it?
     // TODO: should run optimization on each execution step?
-    enum Errors: Error, Equatable {
+    enum Errors: Error, Hashable {
         /// no such attributes
         case unknownAttributes(Set<AttributeName>)
         /// same name, different types
@@ -30,24 +30,24 @@ public extension Query {
 
     func execute() -> Result<Relation, Relation.Errors> {
         switch self {
-        case let .projection(attrs, q):        return applyUnary(q, project(attributes: attrs))
-        case let .selection(predicate, q):     return applyUnary(q, select(where: predicate))
-        case let .rename(to, from, q):         return applyUnary(q, rename(to: to, from: from))
-        case let .orderBy(attrs, q):           return applyUnary(q, orderBy(attributes: attrs))
-        case let .intersection(lhs, rhs):      return applyBinary(lhs, rhs, intersect)
-        case let .union(lhs, rhs):             return applyBinary(lhs, rhs, union)
-        case let .subtraction(lhs, rhs):       return applyBinary(lhs, rhs, subtract)
-        case let .product(lhs, rhs):           return applyBinary(lhs, rhs, product)
-        case let .division(lhs, rhs):          return applyBinary(lhs, rhs, divide)
-        case let .join(.natural, lhs, rhs):    return applyBinary(lhs, rhs, naturalJoin)
-        case let .join(.theta(p), lhs, rhs):   return applyBinary(lhs, rhs, thetaJoin(where: p))
-        case let .join(.leftOuter, lhs, rhs):  return applyBinary(lhs, rhs, leftOuterJoin)
-        case let .join(.rightOuter, lhs, rhs): return applyBinary(lhs, rhs, rightOuterJoin)
-        case let .join(.fullOuter, lhs, rhs):  return applyBinary(lhs, rhs, fullOuterJoin)
-        case let .join(.leftSemi, lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
-        case let .join(.rightSemi, lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
-        case let .join(.antiSemi, lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
-        case let .relation(r):                 return .success(r)
+        case let .projection(attrs, q):           return applyUnary(q, project(attributes: attrs))
+        case let .selection(predicate, q):        return applyUnary(q, select(where: predicate))
+        case let .rename(to, from, q):            return applyUnary(q, rename(to: to, from: from))
+        case let .orderBy(attrs, q):              return applyUnary(q, orderBy(attributes: attrs))
+        case let .intersection(lhs, rhs):         return applyBinary(lhs, rhs, intersect)
+        case let .union(lhs, rhs):                return applyBinary(lhs, rhs, union)
+        case let .subtraction(lhs, rhs):          return applyBinary(lhs, rhs, subtract)
+        case let .product(lhs, rhs):              return applyBinary(lhs, rhs, product)
+        case let .division(lhs, rhs):             return applyBinary(lhs, rhs, divide)
+        case let .join(.natural, lhs, rhs):       return applyBinary(lhs, rhs, naturalJoin)
+        case let .join(.theta(p), lhs, rhs):      return applyBinary(lhs, rhs, thetaJoin(where: p))
+        case let .join(.semi(.left), lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
+        case let .join(.semi(.right), lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
+        case let .join(.semi(.anti), lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
+        case let .join(.outer(.left), lhs, rhs):  return applyBinary(lhs, rhs, leftOuterJoin)
+        case let .join(.outer(.right), lhs, rhs): return applyBinary(lhs, rhs, rightOuterJoin)
+        case let .join(.outer(.full), lhs, rhs):  return applyBinary(lhs, rhs, fullOuterJoin)
+        case let .relation(r):                    return .success(r)
         }
     }
 
@@ -113,15 +113,15 @@ public extension Query {
         }}
     }
 
-    private func orderBy(attributes: KeyValuePairs<AttributeName, Query.SortingOrder>) -> (Relation) -> Result<Relation, Relation.Errors> {
+    private func orderBy(attributes: [Pair<AttributeName, Query.SortingOrder>]) -> (Relation) -> Result<Relation, Relation.Errors> {
         return { r in r.state.flatMap { s in
-            let unknownAttributes = Set(attributes.map(\.key)).subtracting(s.header.attributes.map(\.name))
+            let unknownAttributes = Set(attributes.map(\.left)).subtracting(s.header.attributes.map(\.name))
             guard unknownAttributes.isEmpty else {
                 return .failure(.query(.unknownAttributes(unknownAttributes)))
             }
             return Result {
                 let tuples = try s.tuples.sorted { lhs, rhs in
-                    for (attribute, order) in attributes {
+                    for (attribute, order) in attributes.map(\.both) {
                         let l = lhs[attribute, default: .none]
                         let r = rhs[attribute, default: .none]
 
@@ -284,8 +284,7 @@ public extension Query {
 
     private func antiSemiJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
+            Query.subtraction(.relation(one), .join(.semi(.left), .relation(one), .relation(another))).execute()
         }
     }
 

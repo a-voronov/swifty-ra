@@ -12,3 +12,5 @@ public struct Pair<L, R> {
 }
 
 extension Pair: Equatable where L: Equatable, R: Equatable {}
+
+extension Pair: Hashable where L: Hashable, R: Hashable {}

@@ -10,7 +10,7 @@ public struct Relation {
         case query(Query.Errors)
     }
 
-    public struct State: Equatable {
+    public struct State: Hashable {
         public let (header, tuples): (Header, Tuples)
 
         init(header: Header, tuples: Tuples) {
@@ -18,7 +18,7 @@ public struct Relation {
         }
     }
 
-    private enum InnerState {
+    private enum InnerState: Hashable {
         case resolved(Header, Tuples)
         case unresolved(Query)
 
@@ -114,7 +114,7 @@ public extension Relation {
     }
 
     func order(by attributes: KeyValuePairs<AttributeName, Query.SortingOrder>) -> Relation {
-        withUnaryQuery { q in .orderBy(attributes, q) }
+        withUnaryQuery { q in .orderBy(attributes.map(Pair.init), q) }
     }
 
     func intersect(with another: Relation) -> Relation {
@@ -142,11 +142,15 @@ public extension Relation {
     }
 
     func leftSemiJoin(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .join(.leftSemi, lq, rq) }
+        withBinaryQuery(another: another) { lq, rq in .join(.semi(.left), lq, rq) }
     }
 
     func rightSemiJoin(with another: Relation) -> Relation {
-        withBinaryQuery(another: another) { lq, rq in .join(.rightSemi, lq, rq) }
+        withBinaryQuery(another: another) { lq, rq in .join(.semi(.right), lq, rq) }
+    }
+
+    func antiSemiJoin(with another: Relation) -> Relation {
+        withBinaryQuery(another: another) { lq, rq in .join(.semi(.anti), lq, rq) }
     }
 }
 
@@ -160,12 +164,18 @@ public extension Relation {
     }
 }
 
-// MARK: - Equatable
+// MARK: - Equatable & Hashable
 
-extension Relation.Errors: Equatable { }
+extension Relation.Errors: Hashable { }
 
 extension Relation: Equatable {
     public static func == (lhs: Relation, rhs: Relation) -> Bool {
         lhs.state == rhs.state
+    }
+}
+
+extension Relation: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        state.hash(into: &hasher)
     }
 }

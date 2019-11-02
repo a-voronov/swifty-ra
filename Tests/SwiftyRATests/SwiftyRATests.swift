@@ -298,6 +298,28 @@ final class SwiftyRATests: XCTestCase {
         print(o.tuples.value!)
     }
 
+    func testAntiSemiJoin() {
+        let r = Relation(
+            header: ["Name": .required(.string), "EmpId": .required(.integer), "DeptName": .required(.string)],
+            tuples: [
+                ["Harry", 3415, "Finance"],
+                ["Sally", 2241, "Sales"],
+                ["George", 3401, "Finance"],
+                ["Harriet", 2202, "Production"]
+            ]
+        )
+        let s = Relation(
+            header: ["DeptName": .required(.string), "Manager": .required(.string)],
+            tuples: [
+                ["Sales", "Sally"],
+                ["Production", "Harriet"]
+            ]
+        )
+        let o = r.antiSemiJoin(with: s)
+
+        print(o.tuples.value!)
+    }
+
     static var allTests = [
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
@@ -313,6 +335,7 @@ final class SwiftyRATests: XCTestCase {
         ("testNaturalJoin", testNaturalJoin),
         ("testThetaJoin", testThetaJoin),
         ("testLeftSemiJoin", testLeftSemiJoin),
-        ("testRightSemiJoin", testRightSemiJoin)
+        ("testRightSemiJoin", testRightSemiJoin),
+        ("testAntiSemiJoin", testAntiSemiJoin),
     ]
 }

@@ -10,21 +10,25 @@
 ///     .relation(s)
 /// )
 /// ```
-public indirect enum Query {
-    public enum SortingOrder {
+public indirect enum Query: Hashable {
+    public enum SortingOrder: Hashable {
         case asc, desc
     }
 
-    public enum Join {
-        // if no common attributes = product,
+    public enum Join: Hashable {
+        public enum Semi: Hashable {
+            case right, left, anti
+        }
+
+        public enum Outer: Hashable {
+            case right, left, full
+        }
+
+        // if no common attributes = product
         case natural
         case theta(Predicate)
-        case leftOuter
-        case rightOuter
-        case fullOuter
-        case leftSemi
-        case rightSemi
-        case antiSemi
+        case semi(Semi)
+        case outer(Outer)
     }
 
     case relation(Relation)
@@ -33,7 +37,7 @@ public indirect enum Query {
     // restriction
     case selection(Predicate, Query)
     case rename(AttributeName, AttributeName, Query)
-    case orderBy(KeyValuePairs<AttributeName, SortingOrder>, Query)
+    case orderBy([Pair<AttributeName, SortingOrder>], Query)
     // case groupBy(???, Query) <- should implement it?
 
     case intersection(Query, Query)

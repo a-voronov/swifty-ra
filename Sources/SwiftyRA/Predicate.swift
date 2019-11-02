@@ -1,11 +1,11 @@
 // MARK: - Predicate
 
 extension Query {
-    public indirect enum Predicate {
+    public indirect enum Predicate: Hashable {
         /// Context containing values requested by attributes while performing selection query.
         /// Provides dynamic member access via property as well as via usual subscript by name.
         @dynamicMemberLookup
-        public struct Context {
+        public struct Context: Hashable {
             private let values: [AttributeName: Value]
 
             init(values: [AttributeName: Value]) {
@@ -25,18 +25,18 @@ extension Query {
             }
         }
 
-        public enum Member {
+        public enum Member: Hashable {
             case atr(AttributeName)
             case val(Value)
         }
 
-        public enum Operators {
+        public enum Operators: Hashable {
             case any(Member, Member)
             case numbers(NumericOperation, NumericOperation)
             case strings(StringOperation, StringOperation)
         }
 
-        public indirect enum NumericOperation {
+        public indirect enum NumericOperation: Hashable {
             case member(Member)
 
             case add(NumericOperation, NumericOperation)
@@ -49,7 +49,7 @@ extension Query {
             case length(StringOperation)
         }
 
-        public indirect enum StringOperation {
+        public indirect enum StringOperation: Hashable {
             case member(Member)
 
             case lower(StringOperation)
@@ -147,7 +147,7 @@ private func apply<T, U>(_ block: @escaping (T) throws -> U) -> (T) -> Result<U,
 }
 
 public extension Query.Predicate {
-    enum Errors: Error, Equatable {
+    enum Errors: Error, Hashable {
         case value(Value.Errors)
         case unknownAttributes(Set<AttributeName>)
     }
