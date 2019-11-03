@@ -44,9 +44,9 @@ public extension Query {
         case let .join(.semi(.left), lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
         case let .join(.semi(.right), lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
         case let .join(.semi(.anti), lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
-        case let .join(.outer(.left), lhs, rhs):  return applyBinary(lhs, rhs, leftOuterJoin)
-        case let .join(.outer(.right), lhs, rhs): return applyBinary(lhs, rhs, rightOuterJoin)
-        case let .join(.outer(.full), lhs, rhs):  return applyBinary(lhs, rhs, fullOuterJoin)
+//        case let .join(.outer(.left), lhs, rhs):  return applyBinary(lhs, rhs, leftOuterJoin)
+//        case let .join(.outer(.right), lhs, rhs): return applyBinary(lhs, rhs, rightOuterJoin)
+//        case let .join(.outer(.full), lhs, rhs):  return applyBinary(lhs, rhs, fullOuterJoin)
         case let .relation(r):                    return .success(r)
         }
     }
@@ -288,24 +288,24 @@ public extension Query {
         }
     }
 
-    private func leftOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
-
-    private func rightOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
-
-    private func fullOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            // TODO: implement me!
-            return .success(one)
-        }
-    }
+//    private func leftOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+//        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+//            // TODO: implement me!
+//            return .success(one)
+//        }
+//    }
+//
+//    private func rightOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+//        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+//            // TODO: implement me!
+//            return .success(one)
+//        }
+//    }
+//
+//    private func fullOuterJoin(_ one: Relation, and another: Relation) -> Result<Relation, Relation.Errors> {
+//        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+//            // TODO: implement me!
+//            return .success(one)
+//        }
+//    }
 }

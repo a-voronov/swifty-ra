@@ -20,15 +20,15 @@ public indirect enum Query: Hashable {
             case right, left, anti
         }
 
-        public enum Outer: Hashable {
-            case right, left, full
-        }
+//        public enum Outer: Hashable {
+//            case right, left, full
+//        }
 
         // if no common attributes = product
         case natural
         case theta(Predicate)
         case semi(Semi)
-        case outer(Outer)
+//        case outer(Outer)
     }
 
     case relation(Relation)
