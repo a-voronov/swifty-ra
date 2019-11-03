@@ -1,14 +1,11 @@
+// MARK: Header
+
 /// Serves as a scheme for relation.
 /// Stores attributes info in provided order.
 /// Emmits only `Header.Error` errors.
 /// Provides dynamic member access via property as well as via usual subscript by name.
 @dynamicMemberLookup
 public struct Header {
-    public enum Errors: Error, Hashable {
-        case empty
-        case duplicates(Set<AttributeName>)
-    }
-
     private let names: [AttributeName]
     private let attributesByName: [AttributeName: Attribute]
 
@@ -51,15 +48,16 @@ public struct Header {
     }
 }
 
-extension Header: Hashable {
-    public static func == (lhs: Header, rhs: Header) -> Bool {
-        lhs.attributesByName == rhs.attributesByName
-    }
+// MARK: Errors
 
-    public func hash(into hasher: inout Hasher) {
-        attributesByName.hash(into: &hasher)
+public extension Header {
+    enum Errors: Error {
+        case empty
+        case duplicates(Set<AttributeName>)
     }
 }
+
+// MARK: Creation
 
 public extension Header {
     static func create(attributes: [Attribute]) -> Result<Header, Header.Errors> {
@@ -74,5 +72,27 @@ public extension Header {
         Result
             .init { try Header(with: attributes) }
             .mapError { error in error as! Header.Errors }
+    }
+}
+
+// MARK: Equality & Hashing
+
+extension Header.Errors: Hashable {}
+
+extension Header: Hashable {
+    public static func == (lhs: Header, rhs: Header) -> Bool {
+        lhs.attributesByName == rhs.attributesByName
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        attributesByName.hash(into: &hasher)
+    }
+}
+
+// MARK: Debugging
+
+extension Header: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "Header(" + attributes.map { $0.name + ": " + $0.type.debugDescription }.joined(separator: ", ") + ")"
     }
 }

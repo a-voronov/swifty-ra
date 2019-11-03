@@ -1,15 +1,11 @@
+// MARK: Relation
+
 /// Stores header with attributes in the given order, which serves as a relation scheme.
 /// Stores tuples with values.
 /// Can be either in sucess or failure state. Can't restore from the failure state. Can fail from the success state.
 /// Allows performing Relational Algebra lazily. Actual query will be executed when accessing `state` or `header` or `tuples` values.
 @dynamicMemberLookup
 public struct Relation {
-    public enum Errors: Error {
-        case header(Header.Errors)
-        case value(Value.Errors)
-        case query(Query.Errors)
-    }
-
     public struct State: Hashable {
         public let (header, tuples): (Header, Tuples)
 
@@ -82,6 +78,18 @@ public struct Relation {
         innerState = Reference(.success(.unresolved(query)))
     }
 }
+
+// MARK: Errors
+
+public extension Relation {
+    enum Errors: Error {
+        case header(Header.Errors)
+        case value(Value.Errors)
+        case query(Query.Errors)
+    }
+}
+
+// MARK: Algebra
 
 public extension Relation {
     private func withUnaryQuery(_ transform: (Query) -> Query) -> Relation {
@@ -164,7 +172,7 @@ public extension Relation {
     }
 }
 
-// MARK: - Equatable & Hashable
+// MARK: Equality & Hashing
 
 extension Relation.Errors: Hashable { }
 
@@ -177,5 +185,24 @@ extension Relation: Equatable {
 extension Relation: Hashable {
     public func hash(into hasher: inout Hasher) {
         state.hash(into: &hasher)
+    }
+}
+
+// MARK: Debugging
+
+extension Relation: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch state {
+        case let .success(value):
+            return "✅ Relation:\n" + ConsoleTable(header: value.header, tuples: value.tuples).toString()
+        case let .failure(error):
+            return "❌ Relation:\n" + error.debugDescription
+        }
+    }
+}
+
+extension Relation.Errors: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "\(self)"
     }
 }

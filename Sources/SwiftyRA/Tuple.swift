@@ -1,8 +1,10 @@
+// MARK: Tuple
+
 /// Stores values by attribute name.
 /// Doesn't preserve values order.
 /// Allows dynamic member access via property as well as via usual subscript by name.
 @dynamicMemberLookup
-public struct Tuple: Hashable {
+public struct Tuple {
     public private(set) var values: [AttributeName: Value]
 
     public init(values: [AttributeName: Value]) {
@@ -25,5 +27,17 @@ public struct Tuple: Hashable {
 extension Tuple {
     mutating func rename(to: AttributeName, from: AttributeName) {
         values[to] = values.removeValue(forKey: from) ?? Value.none
+    }
+}
+
+// MARK: Equality & Hashing
+
+extension Tuple: Hashable {}
+
+// MARK: Debugging
+
+extension Tuple: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "(" + values.map { $0.key + ": " + $0.value.debugDescription }.joined(separator: ", ") + ")"
     }
 }

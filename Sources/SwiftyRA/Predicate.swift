@@ -71,6 +71,8 @@ extension Query {
     }
 }
 
+// MARK: Predicate Attributes
+
 extension Query.Predicate {
     var attributes: Set<AttributeName> {
         switch self {

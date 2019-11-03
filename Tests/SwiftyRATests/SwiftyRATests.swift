@@ -16,7 +16,7 @@ final class SwiftyRATests: XCTestCase {
             .project(attributes: ["id", "name", "hobby"])
             .project(attributes: ["id", "name"])
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testSelection() {
@@ -30,7 +30,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let s = r.select(where: r.age > 20 && r.hobby != nil)
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testSelectionDynamicCall() {
@@ -44,7 +44,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let s = r.select(name: "Bob", age: 24)
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testRenaming() {
@@ -58,7 +58,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let s = r.rename(to: "identifier", from: "id")
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testOrdering() {
@@ -72,7 +72,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let s = r.order(hobby: .asc, age: .asc)
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testOrderingDynamicCall() {
@@ -86,7 +86,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let s = r.order(by: ["hobby": .asc, "age": .asc])
 
-        print(s.tuples.value!)
+        print(s)
     }
 
     func testIntersection() {
@@ -108,7 +108,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.intersect(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testUnion() {
@@ -130,7 +130,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.union(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testSubtraction() {
@@ -152,7 +152,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.subtract(s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testProduct() {
@@ -176,7 +176,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.product(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testDivision() {
@@ -201,7 +201,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.divide(by: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testNaturalJoin() {
@@ -226,7 +226,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.join(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testThetaJoin() {
@@ -251,7 +251,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.join(with: s, on: r.officer > r.dept)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testLeftSemiJoin() {
@@ -273,7 +273,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.leftSemiJoin(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testRightSemiJoin() {
@@ -295,7 +295,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.rightSemiJoin(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     func testAntiSemiJoin() {
@@ -317,7 +317,7 @@ final class SwiftyRATests: XCTestCase {
         )
         let o = r.antiSemiJoin(with: s)
 
-        print(o.tuples.value!)
+        print(o)
     }
 
     static var allTests = [

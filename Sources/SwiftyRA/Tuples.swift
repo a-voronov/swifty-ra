@@ -220,7 +220,7 @@ extension Tuples {
     }
 }
 
-// MARK: Tuples Equality
+// MARK: Equality & Hashing
 
 extension Tuples: Equatable {
     public static func == (lhs: Tuples, rhs: Tuples) -> Bool {
@@ -228,10 +228,16 @@ extension Tuples: Equatable {
     }
 }
 
-// MARK: Tuples Hashing
-
 extension Tuples: Hashable {
     public func hash(into hasher: inout Hasher) {
         array.hash(into: &hasher)
+    }
+}
+
+// MARK: Debugging
+
+extension Tuples: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "Tuples[\n\t" + array.map(\.debugDescription).joined(separator: ",\n\t") + "\n]"
     }
 }

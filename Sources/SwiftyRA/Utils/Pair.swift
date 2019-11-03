@@ -1,7 +1,7 @@
 /// When tuples can't be conformed to equatable, custom structs can :)
 public struct Pair<L, R> {
-    public let left: L
-    public let right: R
+    public var left: L
+    public var right: R
 
     public var both: (left: L, right: R) { (left, right) }
 

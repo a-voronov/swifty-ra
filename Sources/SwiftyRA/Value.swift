@@ -1,13 +1,21 @@
+// MARK: Value
+
 /// Values allowed to be stored in relation tuples.
 /// Can be constructed using basic literals as well as enum cases.
 /// Can be compared, and will throws error if values of incompatible types are compared.
-public enum Value: Hashable {
+public enum Value {
     case boolean(Bool)
     case string(String)
     case integer(Int)
     case float(Float)
     case none
 }
+
+// MARK: Equality & Hashing
+
+extension Value: Hashable {}
+
+// MARK: Matching With Attribute Type
 
 public extension Value {
     func isMatching(type: AttributeType) -> Bool {
@@ -30,11 +38,15 @@ public extension Value {
     }
 }
 
+// MARK: Expressing By Literals
+
 extension Value: ExpressibleByBooleanLiteral { public init(booleanLiteral value: Bool)  { self = .boolean(value) } }
 extension Value: ExpressibleByStringLiteral  { public init(stringLiteral value: String) { self = .string(value)  } }
 extension Value: ExpressibleByIntegerLiteral { public init(integerLiteral value: Int)   { self = .integer(value) } }
 extension Value: ExpressibleByFloatLiteral   { public init(floatLiteral value: Float)   { self = .float(value)   } }
 extension Value: ExpressibleByNilLiteral     { public init(nilLiteral: ())              { self = .none           } }
+
+// MARK: Helper getters
 
 public extension Value {
     var hasValue: Bool {
@@ -62,12 +74,18 @@ public extension Value {
     }
 }
 
+// MARK: Errors
+
 public extension Value {
     enum Errors: Error, Hashable {
         case incompatible(Value)
         case incompatible(Value, Value)
     }
+}
 
+// MARK: Comparing Operations
+
+public extension Value {
     static func < (lhs: Value, rhs: Value) throws -> Bool {
         switch (lhs, rhs) {
         case let (.string(l),  .string(r)):  return l < r
@@ -100,6 +118,8 @@ public extension Value {
         try lhs < rhs || lhs == rhs
     }
 }
+
+// MARK: Numeric Operations
 
 public extension Value {
     private static func numeric(lhs: Value, rhs: Value, int: (Int, Int) -> Int, float: (Float, Float) -> Float) throws -> Value {
@@ -142,6 +162,8 @@ public extension Value {
     }
 }
 
+// MARK: String Operations
+
 public extension Value {
     func length() throws -> Value {
         guard let value = string else {
@@ -165,6 +187,8 @@ public extension Value {
     }
 }
 
+// MARK: Boolean Operations
+
 public extension Value {
     private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) throws -> Bool {
         guard let (l, r) = zip(lhs.boolean, rhs.boolean) else {
@@ -186,5 +210,19 @@ public extension Value {
             throw Errors.incompatible(a)
         }
         return !value
+    }
+}
+
+// MARK: Debugging
+
+extension Value: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case let .boolean(value): return "\(value)"
+        case let .string(value): return value.debugDescription
+        case let .integer(value): return "\(value)"
+        case let .float(value): return value.debugDescription
+        case .none: return "nil"
+        }
     }
 }
