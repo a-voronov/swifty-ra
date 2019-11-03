@@ -74,11 +74,6 @@ public extension Value {
         case let (.integer(l), .integer(r)): return l < r
         case let (.float(l),   .float(r)):   return l < r
 
-        // TODO: idk if this one is legal, probably not...?
-        // numbers can be compared by treating integer as a number with floating point
-        case let (.float(l),   .integer(r)):   return l < Float(r)
-        case let (.integer(l),   .float(r)):   return Float(l) < r
-
         // if values are equal, result is false, otherwise true is always greater than false
         case (.boolean(true),  .boolean(false)): return false
         case (.boolean(false), .boolean(true)):  return true
@@ -133,46 +128,46 @@ public extension Value {
     }
 
     static func % (lhs: Value, rhs: Value) throws -> Value {
-        switch (lhs, rhs) {
-        case let (.integer(l), .integer(r)): return .integer(l % r)
-        default: throw Errors.incompatible(lhs, rhs)
+        guard let (l, r) = zip(lhs.integer, rhs.integer) else {
+            throw Errors.incompatible(lhs, rhs)
         }
+        return .integer(l % r)
     }
 
     func rounded(_ rule: FloatingPointRoundingRule) throws -> Value {
-        guard case let .float(v) = self else {
+        guard let value = float else {
             throw Errors.incompatible(self)
         }
-        return .float(v.rounded(rule))
+        return .float(value.rounded(rule))
     }
 }
 
 public extension Value {
     func length() throws -> Value {
-        guard case let .string(v) = self else {
+        guard let value = string else {
             throw Errors.incompatible(self)
         }
-        return .integer(v.count)
+        return .integer(value.count)
     }
 
     func lower() throws -> Value {
-        guard case let .string(v) = self else {
+        guard let value = string else {
             throw Errors.incompatible(self)
         }
-        return .string(v.lowercased())
+        return .string(value.lowercased())
     }
 
     func upper() throws -> Value {
-        guard case let .string(v) = self else {
+        guard let value = string else {
             throw Errors.incompatible(self)
         }
-        return .string(v.uppercased())
+        return .string(value.uppercased())
     }
 }
 
 public extension Value {
     private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) throws -> Bool {
-        guard case let (.boolean(l), .boolean(r)) = (lhs, rhs) else {
+        guard let (l, r) = zip(lhs.boolean, rhs.boolean) else {
             throw Errors.incompatible(lhs, rhs)
         }
         return op(l, r)
@@ -187,9 +182,9 @@ public extension Value {
     }
 
     static prefix func ! (a: Value) throws -> Bool {
-        guard case let .boolean(b) = a else {
+        guard let value = a.boolean else {
             throw Errors.incompatible(a)
         }
-        return !b
+        return !value
     }
 }
