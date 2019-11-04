@@ -41,9 +41,9 @@ extension Attribute: Hashable {}
 extension ValueType: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case .boolean: return "Boolean"
+        case .boolean: return "Bool"
         case .string:  return "String"
-        case .integer: return "Integer"
+        case .integer: return "Int"
         case .float:   return "Float"
         }
     }
