@@ -2,6 +2,14 @@ import XCTest
 @testable import SwiftyRA
 
 final class SwiftyRATests: XCTestCase {
+
+    func testMisc() {
+        let x: Value = 42
+        let y: Value = "hello, world"
+        let result = x + y
+
+        print("❌ \(result)")
+    }
     
     func testProjection() {
         let r = Relation(
@@ -321,6 +329,7 @@ final class SwiftyRATests: XCTestCase {
     }
 
     static var allTests = [
+        ("testMisc", testMisc),
         ("testProjection", testProjection),
         ("testSelection",  testSelection),
         ("testSelectionDynamicCall",  testSelectionDynamicCall),

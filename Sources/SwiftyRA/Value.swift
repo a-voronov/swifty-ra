@@ -77,8 +77,10 @@ public extension Value {
 // MARK: Errors
 
 public extension Value {
+    typealias Throws<T> = Result<T, Value.Errors>
+
     enum Errors: Error, Hashable {
-        case incompatible(Value)
+        case unsupported(Value)
         case incompatible(Value, Value)
     }
 }
@@ -86,130 +88,130 @@ public extension Value {
 // MARK: Comparing Operations
 
 public extension Value {
-    static func < (lhs: Value, rhs: Value) throws -> Bool {
+    static func < (lhs: Value, rhs: Value) -> Throws<Bool> {
         switch (lhs, rhs) {
-        case let (.string(l),  .string(r)):  return l < r
-        case let (.integer(l), .integer(r)): return l < r
-        case let (.float(l),   .float(r)):   return l < r
+        case let (.string(l),  .string(r)):  return .success(l < r)
+        case let (.integer(l), .integer(r)): return .success(l < r)
+        case let (.float(l),   .float(r)):   return .success(l < r)
 
         // if values are equal, result is false, otherwise true is always greater than false
-        case (.boolean(true),  .boolean(false)): return false
-        case (.boolean(false), .boolean(true)):  return true
-        case (.boolean,        .boolean):        return false
+        case (.boolean(true),  .boolean(false)): return .success(false)
+        case (.boolean(false), .boolean(true)):  return .success(true)
+        case (.boolean,        .boolean):        return .success(false)
 
         // if values are equal, result is false, otherwise non-none value is always greater than none
-        case (.none, .none): return false
-        case (_,     .none): return false
-        case (.none, _):     return true
+        case (.none, .none): return .success(false)
+        case (_,     .none): return .success(false)
+        case (.none, _):     return .success(true)
 
-        default: throw Errors.incompatible(lhs, rhs)
+        default: return .failure(.incompatible(lhs, rhs))
         }
     }
 
-    static func > (lhs: Value, rhs: Value) throws -> Bool {
-        try rhs < lhs
+    static func > (lhs: Value, rhs: Value) -> Throws<Bool> {
+        rhs < lhs
     }
 
-    static func >= (lhs: Value, rhs: Value) throws -> Bool {
-        try lhs > rhs || lhs == rhs
+    static func >= (lhs: Value, rhs: Value) -> Throws<Bool> {
+        (lhs > rhs).map { $0 || lhs == rhs }
     }
 
-    static func <= (lhs: Value, rhs: Value) throws -> Bool {
-        try lhs < rhs || lhs == rhs
+    static func <= (lhs: Value, rhs: Value) -> Throws<Bool> {
+        (lhs < rhs).map { $0 || lhs == rhs }
     }
 }
 
 // MARK: Numeric Operations
 
 public extension Value {
-    private static func numeric(lhs: Value, rhs: Value, int: (Int, Int) -> Int, float: (Float, Float) -> Float) throws -> Value {
+    private static func numeric(lhs: Value, rhs: Value, int: (Int, Int) -> Int, float: (Float, Float) -> Float) -> Throws<Value> {
         switch (lhs, rhs) {
-        case let (.integer(l), .integer(r)): return .integer(int(l, r))
-        case let (.float(l),   .float(r)):   return .float(float(l, r))
+        case let (.integer(l), .integer(r)): return .success(.integer(int(l, r)))
+        case let (.float(l),   .float(r)):   return .success(.float(float(l, r)))
 
-        default: throw Errors.incompatible(lhs, rhs)
+        default: return .failure(.incompatible(lhs, rhs))
         }
     }
 
-    static func + (lhs: Value, rhs: Value) throws -> Value {
-        try numeric(lhs: lhs, rhs: rhs, int: +, float: +)
+    static func + (lhs: Value, rhs: Value) -> Throws<Value> {
+        numeric(lhs: lhs, rhs: rhs, int: +, float: +)
     }
 
-    static func - (lhs: Value, rhs: Value) throws -> Value {
-        try numeric(lhs: lhs, rhs: rhs, int: -, float: -)
+    static func - (lhs: Value, rhs: Value) -> Throws<Value> {
+        numeric(lhs: lhs, rhs: rhs, int: -, float: -)
     }
 
-    static func * (lhs: Value, rhs: Value) throws -> Value {
-        try numeric(lhs: lhs, rhs: rhs, int: *, float: *)
+    static func * (lhs: Value, rhs: Value) -> Throws<Value> {
+        numeric(lhs: lhs, rhs: rhs, int: *, float: *)
     }
 
-    static func / (lhs: Value, rhs: Value) throws -> Value {
-        try numeric(lhs: lhs, rhs: rhs, int: /, float: /)
+    static func / (lhs: Value, rhs: Value) -> Throws<Value> {
+        numeric(lhs: lhs, rhs: rhs, int: /, float: /)
     }
 
-    static func % (lhs: Value, rhs: Value) throws -> Value {
-        guard let (l, r) = zip(lhs.integer, rhs.integer) else {
-            throw Errors.incompatible(lhs, rhs)
-        }
-        return .integer(l % r)
+    static func % (lhs: Value, rhs: Value) -> Throws<Value> {
+        Throws(
+            value: zip(lhs.integer, rhs.integer).map(%).map(Value.integer),
+            error: .incompatible(lhs, rhs)
+        )
     }
 
-    func rounded(_ rule: FloatingPointRoundingRule) throws -> Value {
-        guard let value = float else {
-            throw Errors.incompatible(self)
-        }
-        return .float(value.rounded(rule))
+    func rounded(_ rule: FloatingPointRoundingRule) -> Throws<Value> {
+        Throws(
+            value: float.map { $0.rounded(rule) }.map(Value.float),
+            error: .unsupported(self)
+        )
     }
 }
 
 // MARK: String Operations
 
 public extension Value {
-    func length() throws -> Value {
-        guard let value = string else {
-            throw Errors.incompatible(self)
-        }
-        return .integer(value.count)
+    func length() -> Throws<Value> {
+        Throws(
+            value: string.map(\.count).map(Value.integer),
+            error: .unsupported(self)
+        )
     }
 
-    func lower() throws -> Value {
-        guard let value = string else {
-            throw Errors.incompatible(self)
-        }
-        return .string(value.lowercased())
+    func lower() -> Throws<Value> {
+        Throws(
+            value: string.map { $0.lowercased() }.map(Value.string),
+            error: .unsupported(self)
+        )
     }
 
-    func upper() throws -> Value {
-        guard let value = string else {
-            throw Errors.incompatible(self)
-        }
-        return .string(value.uppercased())
+    func upper() -> Throws<Value> {
+        Throws(
+            value: string.map { $0.uppercased() }.map(Value.string),
+            error: .unsupported(self)
+        )
     }
 }
 
 // MARK: Boolean Operations
 
 public extension Value {
-    private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) throws -> Bool {
-        guard let (l, r) = zip(lhs.boolean, rhs.boolean) else {
-            throw Errors.incompatible(lhs, rhs)
-        }
-        return op(l, r)
+    private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) -> Throws<Bool> {
+        Throws(
+            value: zip(lhs.boolean, rhs.boolean).map(op),
+            error: .incompatible(lhs, rhs)
+        )
     }
 
-    static func && (lhs: Value, rhs: Value) throws -> Bool {
-        try boolean(lhs, rhs) { $0 && $1 }
+    static func && (lhs: Value, rhs: Value) -> Throws<Bool> {
+        boolean(lhs, rhs) { $0 && $1 }
     }
 
-    static func || (lhs: Value, rhs: Value) throws -> Bool {
-        try boolean(lhs, rhs) { $0 || $1 }
+    static func || (lhs: Value, rhs: Value) -> Throws<Bool> {
+        boolean(lhs, rhs) { $0 || $1 }
     }
 
-    static prefix func ! (a: Value) throws -> Bool {
-        guard let value = a.boolean else {
-            throw Errors.incompatible(a)
-        }
-        return !value
+    static prefix func ! (a: Value) -> Throws<Bool> {
+        Throws(
+            value: a.boolean.map(!),
+            error: .unsupported(a)
+        )
     }
 }
 
@@ -223,6 +225,17 @@ extension Value: CustomDebugStringConvertible {
         case let .integer(value): return "\(value)"
         case let .float(value): return value.debugDescription
         case .none: return "nil"
+        }
+    }
+}
+
+extension Value.Errors: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case let .incompatible(lhs, rhs):
+            return "Values have incompatible types for operation: Value(\(lhs.debugDescription)), Value(\(rhs.debugDescription))"
+        case let .unsupported(value):
+            return "Can't perform operation with Value(\(value.debugDescription))"
         }
     }
 }

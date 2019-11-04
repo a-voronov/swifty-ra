@@ -2,6 +2,7 @@
 
 extension Query {
     public indirect enum Predicate: Hashable {
+        public typealias Throws<T> = Result<T, Query.Predicate.Errors>
         /// Context containing values requested by attributes while performing selection query.
         /// Provides dynamic member access via property as well as via usual subscript by name.
         @dynamicMemberLookup
@@ -136,15 +137,9 @@ extension Query.Predicate.StringOperation {
 
 // MARK: - Evaluation
 
-private func apply<T, U>(_ block: @escaping (T) throws -> U) -> (T) -> Result<U, Query.Predicate.Errors> {
+private func apply<T, U>(_ block: @escaping (T) -> Value.Throws<U>) -> (T) -> Query.Predicate.Throws<U> {
     return { value in
-        do {
-            return .success(try block(value))
-        } catch let error as Value.Errors {
-            return .failure(.value(error))
-        } catch {
-            return .failure(error as! Query.Predicate.Errors)
-        }
+        block(value).mapError(Query.Predicate.Errors.value)
     }
 }
 
@@ -159,22 +154,22 @@ public extension Query.Predicate {
         _ rhs: Query.Predicate,
         _ ctx: Query.Predicate.Context,
         _ op: @escaping (Bool, Bool) -> Bool
-    ) -> Result<Bool, Query.Predicate.Errors> {
+    ) -> Query.Predicate.Throws<Bool> {
         zip(lhs.eval(ctx), rhs.eval(ctx)).mapError(\.value).map(op)
     }
 
-    private func toBool(_ value: Value) -> Result<Bool, Query.Predicate.Errors> {
-        value.boolean.map(Result.success) ?? .failure(.value(.incompatible(value)))
+    private func toBool(_ value: Value) -> Query.Predicate.Throws<Bool> {
+        value.boolean.map(Query.Predicate.Throws.success) ?? .failure(.value(.unsupported(value)))
     }
 
-    func eval(_ ctx: Query.Predicate.Context) -> Result<Bool, Query.Predicate.Errors> {
+    func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<Bool> {
         switch self {
         case let .member(member): return member.eval(ctx).flatMap(toBool)
 
         case let .and(lhs, rhs): return applyBinary(lhs, rhs, ctx) { $0 && $1 }
         case let .or(lhs, rhs):  return applyBinary(lhs, rhs, ctx) { $0 || $1 }
+        case let .not(p):  return p.eval(ctx).map(!)
 
-        case let .not(op):  return op.eval(ctx).map(!)
         case let .eq(ops):  return ops.eval(ctx).map(==)
         case let .neq(ops): return ops.eval(ctx).map(!=)
         case let .gt(ops):  return ops.eval(ctx).flatMap(apply(>))
@@ -186,7 +181,7 @@ public extension Query.Predicate {
 }
 
 public extension Query.Predicate.Operators {
-    func eval(_ ctx: Query.Predicate.Context) -> Result<(Value, Value), Query.Predicate.Errors> {
+    func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<(Value, Value)> {
         switch self {
         case let .any(lhs, rhs):     return zip(lhs.eval(ctx), rhs.eval(ctx)).mapError(\.value)
         case let .numbers(lhs, rhs): return zip(lhs.eval(ctx), rhs.eval(ctx)).mapError(\.value)
@@ -200,12 +195,12 @@ public extension Query.Predicate.NumericOperation {
         _ lhs: Query.Predicate.NumericOperation,
         _ rhs: Query.Predicate.NumericOperation,
         _ ctx: Query.Predicate.Context,
-        _ op: @escaping (Value, Value) throws -> Value
-    ) -> Result<Value, Query.Predicate.Errors> {
+        _ op: @escaping (Value, Value) -> Value.Throws<Value>
+    ) -> Query.Predicate.Throws<Value> {
         zip(lhs.eval(ctx), rhs.eval(ctx)).mapError(\.value).flatMap(apply(op))
     }
 
-    func eval(_ ctx: Query.Predicate.Context) -> Result<Value, Query.Predicate.Errors> {
+    func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<Value> {
         switch self {
         case let .member(member): return member.eval(ctx)
 
@@ -215,27 +210,27 @@ public extension Query.Predicate.NumericOperation {
         case let .div(lhs, rhs): return applyBinary(lhs, rhs, ctx, /)
         case let .mod(lhs, rhs): return applyBinary(lhs, rhs, ctx, %)
 
-        case let .round(rule, op): return op.eval(ctx).flatMap(apply { try $0.rounded(rule) })
-        case let .length(op): return op.eval(ctx).flatMap(apply { try $0.length() })
+        case let .round(rule, op): return op.eval(ctx).flatMap(apply { $0.rounded(rule) })
+        case let .length(op): return op.eval(ctx).flatMap(apply { $0.length() })
         }
     }
 }
 
 public extension Query.Predicate.StringOperation {
-    func eval(_ ctx: Query.Predicate.Context) -> Result<Value, Query.Predicate.Errors> {
+    func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<Value> {
         switch self {
         case let .member(member): return member.eval(ctx)
 
-        case let .lower(op): return op.eval(ctx).flatMap(apply { try $0.lower() })
-        case let .upper(op): return op.eval(ctx).flatMap(apply { try $0.upper() })
+        case let .lower(op): return op.eval(ctx).flatMap(apply { $0.lower() })
+        case let .upper(op): return op.eval(ctx).flatMap(apply { $0.upper() })
         }
     }
 }
 
 public extension Query.Predicate.Member {
-    func eval(_ ctx: Query.Predicate.Context) -> Result<Value, Query.Predicate.Errors> {
+    func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<Value> {
         switch self {
-        case let .atr(a): return ctx[a].map(Result.success) ?? .failure(.unknownAttributes([a]))
+        case let .atr(a): return ctx[a].map(Query.Predicate.Throws.success) ?? .failure(.unknownAttributes([a]))
         case let .val(v): return .success(v)
         }
     }

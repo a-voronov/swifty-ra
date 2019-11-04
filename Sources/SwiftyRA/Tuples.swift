@@ -84,41 +84,52 @@ public struct Tuples {
 
     // MARK: Transforming Set
 
-    public func forEach(_ body: (Tuple) throws -> Void) rethrows {
-        try array.forEach(body)
-    }
-
-    public func filter(_ isIncluded: (Tuple) throws -> Bool) rethrows -> Tuples {
-        var ts = Tuples()
-        for element in array {
-            if try isIncluded(element) {
-                ts.insert(element)
+    public func forEach<E: Error>(_ body: (Tuple) -> Result<Void, E>) -> Result<Void, E> {
+        for tuple in array {
+            switch body(tuple) {
+            case .success: continue
+            case .failure(let error): return .failure(error)
             }
         }
-        return ts
+        return .success()
+    }
+
+    public func forEach(_ body: (Tuple) -> Void) {
+        safely { forEach { .success(body($0)) } }
     }
 
     public func filter<E: Error>(_ isIncluded: (Tuple) -> Result<Bool, E>) -> Result<Tuples, E> {
-        var ts = Tuples()
-        for element in array {
-            switch isIncluded(element) {
+        var tuples = Tuples()
+        for tuple in array {
+            switch isIncluded(tuple) {
             case let .success(passed):
                 if passed {
-                    ts.insert(element)
+                    tuples.insert(tuple)
                 }
             case let .failure(error):
                 return .failure(error)
             }
         }
-        return .success(ts)
+        return .success(tuples)
     }
 
-    public func sorted(by areInIncreasingOrder: (Tuple, Tuple) throws -> Bool) rethrows -> Tuples {
-        try updating(self) { try $0.sort(by: areInIncreasingOrder) }
+    public func filter(_ isIncluded: (Tuple) -> Bool) -> Tuples {
+        safely { filter { .success(isIncluded($0)) } }
     }
 
-    mutating func sort(by areInIncreasingOrder: (Tuple, Tuple) throws -> Bool) rethrows {
-        try array.sort(by: areInIncreasingOrder)
+    public func sorted<E: Error>(by areInIncreasingOrder: (Tuple, Tuple) -> Result<Bool, E>) -> Result<Tuples, E> {
+        var tuples = self
+        return Result {
+            try tuples.array.sort { lhs, rhs in
+                try areInIncreasingOrder(lhs, rhs).get()
+            }
+            return tuples
+        }
+        .mapError { $0 as! E }
+    }
+
+    public func sorted(by areInIncreasingOrder: (Tuple, Tuple) -> Bool) -> Tuples {
+        safely { sorted { .success(areInIncreasingOrder($0, $1)) } }
     }
 }
 
@@ -127,54 +138,32 @@ public struct Tuples {
 extension Tuples {
     private init() {}
 
-    func map(_ transform: (Tuple) throws -> Tuple) rethrows -> Tuples {
-        var ts = Tuples()
-        for element in array {
-            ts.insert(try transform(element))
-        }
-        return ts
+    private func safely<T>(_ f: () -> Result<T, Never>) -> T {
+        f().only
     }
 
-    func flatMap(_ transform: (Tuple) throws -> Tuples) rethrows -> Tuples {
-        var ts = Tuples()
-        for element in array {
-            try transform(element).forEach { t in
-                ts.insert(t)
-            }
-        }
-        return ts
-    }
-
-    func compactMap(_ transform: (Tuple) throws -> Tuple?) rethrows -> Tuples {
-        var ts = Tuples()
-        for element in array {
-            if let e = try transform(element) {
-                ts.insert(e)
-            }
-        }
-        return ts
-    }
-}
-
-extension Tuples {
     func map<E: Error>(_ transform: (Tuple) -> Result<Tuple, E>) -> Result<Tuples, E> {
         var tuples = Tuples()
-        for element in array {
-            switch transform(element) {
-            case let .success(tuple): tuples.insert(tuple)
+        for tuple in array {
+            switch transform(tuple) {
+            case let .success(newTuple): tuples.insert(newTuple)
             case let .failure(error): return .failure(error)
             }
         }
         return .success(tuples)
     }
 
+    func map(_ transform: (Tuple) -> Tuple) -> Tuples {
+        safely { map { .success(transform($0)) } }
+    }
+
     func flatMap<E: Error>(_ transform: (Tuple) -> Result<Tuples, E>) -> Result<Tuples, E> {
         var tuples = Tuples()
-        for element in array {
-            switch transform(element) {
-            case let .success(ts):
-                ts.forEach { tuple in
-                    tuples.insert(tuple)
+        for tuple in array {
+            switch transform(tuple) {
+            case let .success(newTuples):
+                newTuples.forEach { newTuple in
+                    tuples.insert(newTuple)
                 }
             case let .failure(error):
                 return .failure(error)
@@ -183,19 +172,27 @@ extension Tuples {
         return .success(tuples)
     }
 
+    func flatMap(_ transform: (Tuple) -> Tuples) -> Tuples {
+        safely { flatMap { .success(transform($0)) } }
+    }
+
     func compactMap<E: Error>(_ transform: (Tuple) -> Result<Tuple?, E>) -> Result<Tuples, E> {
         var tuples = Tuples()
-        for element in array {
-            switch transform(element) {
-            case let .success(tuple):
-                if let tuple = tuple {
-                    tuples.insert(tuple)
+        for tuple in array {
+            switch transform(tuple) {
+            case let .success(newTuple):
+                if let newTuple = newTuple {
+                    tuples.insert(newTuple)
                 }
             case let .failure(error):
                 return .failure(error)
             }
         }
         return .success(tuples)
+    }
+
+    func compactMap(_ transform: (Tuple) -> Tuple?) -> Tuples {
+        safely { compactMap { .success(transform($0)) } }
     }
 }
 

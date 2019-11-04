@@ -6,6 +6,8 @@
 /// Allows performing Relational Algebra lazily. Actual query will be executed when accessing `state` or `header` or `tuples` values.
 @dynamicMemberLookup
 public struct Relation {
+    public typealias Throws<T> = Result<T, Errors>
+
     public struct State: Hashable {
         public let (header, tuples): (Header, Tuples)
 
@@ -24,26 +26,26 @@ public struct Relation {
         }
     }
 
-    private let innerState: Reference<Result<InnerState, Errors>>
+    private let innerState: Reference<Throws<InnerState>>
 
-    public var state: Result<State, Errors> {
+    public var state: Throws<State> {
         innerState.value.flatMap { s in
             switch s {
             case let .resolved(h, ts):
                 return .success(State(header: h, tuples: ts))
             case let .unresolved(q):
-                self.innerState.value = q.optimize().execute().flatMap(\.innerState.value)
+                innerState.value = q.optimize().execute().flatMap(\.innerState.value)
 
-                return self.state
+                return state
             }
         }
     }
 
-    public var header: Result<Header, Errors> {
+    public var header: Throws<Header> {
         state.map(\.header)
     }
 
-    public var tuples: Result<Tuples, Errors> {
+    public var tuples: Throws<Tuples> {
         state.map(\.tuples)
     }
 
@@ -58,14 +60,14 @@ public struct Relation {
     /// Invalid Tuples will be just ignored and not added into Relation (make this behvaior configuarble to result in error?).
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[Value]]) {
         innerState = Reference(Header.create(header)
-            .mapError(Relation.Errors.header)
+            .mapError(Errors.header)
             .map { header in .resolved(header, Tuples(header: header, tuples: tuples)) }
         )
     }
 
     public init(header: KeyValuePairs<AttributeName, AttributeType>, tuples: [[AttributeName: Value]]) {
         innerState = Reference(Header.create(header)
-            .mapError(Relation.Errors.header)
+            .mapError(Errors.header)
             .map { header in .resolved(header, Tuples(header: header, tuples: tuples)) }
         )
     }
