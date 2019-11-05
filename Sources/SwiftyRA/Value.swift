@@ -80,14 +80,36 @@ public extension Value {
     typealias Throws<T> = Result<T, Value.Errors>
 
     enum Errors: Error, Hashable {
-        case unsupported(Value)
+        case mismatch(Value, ExpectedType)
+        case mismatches(Value, Value, ExpectedType)
         case incompatible(Value, Value)
+
+        public enum ExpectedType: Hashable {
+            case type(ValueType)
+            case either(Set<ValueType>)
+        }
     }
 }
 
 // MARK: Comparing Operations
 
 public extension Value {
+    static func == (lhs: Value, rhs: Value) -> Throws<Bool> {
+        switch (lhs, rhs) {
+        case let (.boolean(l), .boolean(r)): return .success(l == r)
+        case let (.string(l),  .string(r)):  return .success(l == r)
+        case let (.integer(l), .integer(r)): return .success(l == r)
+        case let (.float(l),   .float(r)):   return .success(l == r)
+        case     (.none,       .none):       return .success(true)
+
+        default: return .failure(.incompatible(lhs, rhs))
+        }
+    }
+
+    static func != (lhs: Value, rhs: Value) -> Throws<Bool> {
+        (lhs == rhs).map(!)
+    }
+
     static func < (lhs: Value, rhs: Value) -> Throws<Bool> {
         switch (lhs, rhs) {
         case let (.string(l),  .string(r)):  return .success(l < r)
@@ -129,7 +151,7 @@ public extension Value {
         case let (.integer(l), .integer(r)): return .success(.integer(int(l, r)))
         case let (.float(l),   .float(r)):   return .success(.float(float(l, r)))
 
-        default: return .failure(.incompatible(lhs, rhs))
+        default: return .failure(.mismatches(lhs, rhs, .either([.integer, .float])))
         }
     }
 
@@ -152,14 +174,14 @@ public extension Value {
     static func % (lhs: Value, rhs: Value) -> Throws<Value> {
         Throws(
             value: zip(lhs.integer, rhs.integer).map(%).map(Value.integer),
-            error: .incompatible(lhs, rhs)
+            error: .mismatches(lhs, rhs, .type(.integer))
         )
     }
 
     func rounded(_ rule: FloatingPointRoundingRule) -> Throws<Value> {
         Throws(
             value: float.map { $0.rounded(rule) }.map(Value.float),
-            error: .unsupported(self)
+            error: .mismatch(self, .type(.float))
         )
     }
 }
@@ -170,21 +192,21 @@ public extension Value {
     func length() -> Throws<Value> {
         Throws(
             value: string.map(\.count).map(Value.integer),
-            error: .unsupported(self)
+            error: .mismatch(self, .type(.string))
         )
     }
 
     func lower() -> Throws<Value> {
         Throws(
             value: string.map { $0.lowercased() }.map(Value.string),
-            error: .unsupported(self)
+            error: .mismatch(self, .type(.string))
         )
     }
 
     func upper() -> Throws<Value> {
         Throws(
             value: string.map { $0.uppercased() }.map(Value.string),
-            error: .unsupported(self)
+            error: .mismatch(self, .type(.string))
         )
     }
 }
@@ -195,7 +217,7 @@ public extension Value {
     private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) -> Throws<Bool> {
         Throws(
             value: zip(lhs.boolean, rhs.boolean).map(op),
-            error: .incompatible(lhs, rhs)
+            error: .mismatches(lhs, rhs, .type(.boolean))
         )
     }
 
@@ -210,7 +232,7 @@ public extension Value {
     static prefix func ! (a: Value) -> Throws<Bool> {
         Throws(
             value: a.boolean.map(!),
-            error: .unsupported(a)
+            error: .mismatch(a, .type(.boolean))
         )
     }
 }
@@ -229,13 +251,24 @@ extension Value: CustomDebugStringConvertible {
     }
 }
 
+extension Value.Errors.ExpectedType: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case let .type(type): return "\(type) type"
+        case let .either(types): return "either \(types.map(\.debugDescription).joined(separator: " or ")) type"
+        }
+    }
+}
+
 extension Value.Errors: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
+        case let .mismatch(value, expectedType):
+            return "Value \(value) should be of \(expectedType)"
+        case let .mismatches(lhs, rhs, expectedType):
+            return "Values \(lhs) and \(rhs) should be of \(expectedType)"
         case let .incompatible(lhs, rhs):
-            return "Values have incompatible types for operation: Value(\(lhs.debugDescription)), Value(\(rhs.debugDescription))"
-        case let .unsupported(value):
-            return "Can't perform operation with Value(\(value.debugDescription))"
+            return "Values \(lhs) and \(rhs) should be of the same type"
         }
     }
 }

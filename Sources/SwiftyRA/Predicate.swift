@@ -159,7 +159,10 @@ public extension Query.Predicate {
     }
 
     private func toBool(_ value: Value) -> Query.Predicate.Throws<Bool> {
-        value.boolean.map(Query.Predicate.Throws.success) ?? .failure(.value(.unsupported(value)))
+        Query.Predicate.Throws(
+            value: value.boolean,
+            error: .value(.mismatch(value, .type(.boolean)))
+        )
     }
 
     func eval(_ ctx: Query.Predicate.Context) -> Query.Predicate.Throws<Bool> {
