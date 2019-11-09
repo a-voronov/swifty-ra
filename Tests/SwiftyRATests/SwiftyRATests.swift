@@ -23,6 +23,8 @@ final class SwiftyRATests: XCTestCase {
         print(r.age > 20 && r.hobby != nil)
         print(Query.Predicate.StringOperation.upper(.member(r.name)))
         print(val("id").debugDescription)
+
+        print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .relation(r)), .rename("years", "age", .relation(r))))
     }
     
     func testProjection() {

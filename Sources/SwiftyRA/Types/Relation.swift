@@ -108,6 +108,7 @@ public extension Relation {
         withUnaryQuery { q in .selection(predicate, q) }
     }
 
+    // TODO: allow renaming multiple attributes
     func rename(to newAttribute: AttributeName, from originalAttribute: AttributeName) -> Relation {
         withUnaryQuery { q in .rename(newAttribute, originalAttribute, q) }
     }
