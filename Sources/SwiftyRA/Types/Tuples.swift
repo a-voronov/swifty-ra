@@ -230,11 +230,3 @@ extension Tuples: Hashable {
         array.hash(into: &hasher)
     }
 }
-
-// MARK: Debugging
-
-extension Tuples: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "Tuples[\n\t" + array.map(\.debugDescription).joined(separator: ",\n\t") + "\n]"
-    }
-}

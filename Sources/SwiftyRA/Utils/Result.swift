@@ -58,7 +58,7 @@ extension Result {
 /// Zip 2 Results
 func zip<A, B, E: Error, F: Error>(_ a: Result<A, E>, _ b: Result<B, F>) -> Result<(A, B), Either<E, F>> {
     a.mapError(Either.left).flatMap { a in
-        b.mapError(Either.right).flatMap { b in .success((a, b)) }
+        b.mapError(Either.right).map { b in (a, b) }
     }
 }
 

@@ -33,11 +33,3 @@ extension Tuple {
 // MARK: Equality & Hashing
 
 extension Tuple: Hashable {}
-
-// MARK: Debugging
-
-extension Tuple: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "(" + values.map { $0.key + ": " + $0.value.debugDescription }.joined(separator: ", ") + ")"
-    }
-}

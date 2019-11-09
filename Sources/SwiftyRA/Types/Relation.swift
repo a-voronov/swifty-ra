@@ -6,8 +6,6 @@
 /// Allows performing Relational Algebra lazily. Actual query will be executed when accessing `state` or `header` or `tuples` values.
 @dynamicMemberLookup
 public struct Relation {
-    public typealias Throws<T> = Result<T, Errors>
-
     public struct State: Hashable {
         public let (header, tuples): (Header, Tuples)
 
@@ -81,18 +79,9 @@ public struct Relation {
     }
 }
 
-// MARK: Errors
-
-public extension Relation {
-    enum Errors: Error {
-        case header(Header.Errors)
-        case value(Value.Errors)
-        case query(Query.Errors)
-    }
-}
-
 // MARK: Algebra
 
+// TODO: Should be extracted into Algebra folder once lazy evaluation is implemented
 public extension Relation {
     private func withUnaryQuery(_ transform: (Query) -> Query) -> Relation {
         innerState.value.map(\.query)
@@ -176,8 +165,6 @@ public extension Relation {
 
 // MARK: Equality & Hashing
 
-extension Relation.Errors: Hashable { }
-
 extension Relation: Equatable {
     public static func == (lhs: Relation, rhs: Relation) -> Bool {
         lhs.state == rhs.state
@@ -187,24 +174,5 @@ extension Relation: Equatable {
 extension Relation: Hashable {
     public func hash(into hasher: inout Hasher) {
         state.hash(into: &hasher)
-    }
-}
-
-// MARK: Debugging
-
-extension Relation: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        switch state {
-        case let .success(value):
-            return "✅ Relation:\n" + ConsoleTable(header: value.header, tuples: value.tuples).toString()
-        case let .failure(error):
-            return "❌ Relation:\n" + error.debugDescription
-        }
-    }
-}
-
-extension Relation.Errors: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "\(self)"
     }
 }

@@ -4,3 +4,11 @@ extension Collection {
         !isEmpty
     }
 }
+
+extension Collection {
+    func decompose() -> (head: Element, tail: [Element])? {
+        first.map { head in
+            (head: head, tail: Array(dropFirst()))
+        }
+    }
+}

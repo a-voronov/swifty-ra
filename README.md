@@ -5,7 +5,7 @@ Relational Algebra in Swift.
 ## TODO
 - provide verbose errors & user-friendly description (especially if complex query processing fails)
 - rewrite eager to lazy query processing (custom iterators?)
-- tests and refactoring (value operations, functions, query processing, tuples, etc)
+- tests and refactoring (value operations, functions, query processing, tuples, non-empty collections etc)
 - suport more value types
 - support indexing and primary keys
 - think of foreign keys

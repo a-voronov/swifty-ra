@@ -9,6 +9,20 @@ final class SwiftyRATests: XCTestCase {
         let result = x + y
 
         print("❌ \(result)")
+
+        let r = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21, nil],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19]
+            ]
+        )
+        print(r.header.value!["id"])
+        print(r.id)
+        print(r.age > 20 && r.hobby != nil)
+        print(Query.Predicate.StringOperation.upper(.member(r.name)))
+        print(val("id").debugDescription)
     }
     
     func testProjection() {

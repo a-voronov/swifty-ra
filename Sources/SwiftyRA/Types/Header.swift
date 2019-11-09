@@ -13,6 +13,18 @@ public struct Header {
         return names.map { attributesByName[$0]! }
     }
 
+    public subscript(name: AttributeName) -> Attribute? {
+        attributesByName[name]
+    }
+
+    public subscript(dynamicMember member: AttributeName) -> Attribute? {
+        self[member]
+    }
+}
+
+// MARK: Creation
+
+public extension Header {
     private init(with attributes: [(AttributeName, AttributeType)]) throws {
         guard attributes.isNotEmpty else {
             throw Errors.empty
@@ -31,44 +43,23 @@ public struct Header {
             attributesByName[name] = Attribute(name: name, type: type)
         }
 
-        guard errors.isEmpty else {
-            throw Errors.duplicates(errors)
+        if let errs = errors.decompose().map(OneOrMore.few) {
+            throw Errors.duplicates(errs)
         }
 
         self.names = names
         self.attributesByName = attributesByName
     }
 
-    public subscript(name: AttributeName) -> Attribute? {
-        attributesByName[name]
-    }
-
-    public subscript(dynamicMember member: AttributeName) -> Attribute? {
-        self[member]
-    }
-}
-
-// MARK: Errors
-
-public extension Header {
-    enum Errors: Error {
-        case empty
-        case duplicates(Set<AttributeName>)
-    }
-}
-
-// MARK: Creation
-
-public extension Header {
-    static func create(attributes: [Attribute]) -> Result<Header, Header.Errors> {
+    static func create(attributes: [Attribute]) -> Throws<Header> {
         create(with: attributes.map { attribute in (attribute.name, attribute.type) })
     }
 
-    static func create(_ attributes: KeyValuePairs<AttributeName, AttributeType>) -> Result<Header, Header.Errors> {
+    static func create(_ attributes: KeyValuePairs<AttributeName, AttributeType>) -> Throws<Header> {
         create(with: Array(attributes))
     }
 
-    private static func create(with attributes: [(AttributeName, AttributeType)]) -> Result<Header, Header.Errors> {
+    private static func create(with attributes: [(AttributeName, AttributeType)]) -> Throws<Header> {
         Result
             .init { try Header(with: attributes) }
             .mapError { error in error as! Header.Errors }
@@ -77,8 +68,6 @@ public extension Header {
 
 // MARK: Equality & Hashing
 
-extension Header.Errors: Hashable {}
-
 extension Header: Hashable {
     public static func == (lhs: Header, rhs: Header) -> Bool {
         lhs.attributesByName == rhs.attributesByName
@@ -86,13 +75,5 @@ extension Header: Hashable {
 
     public func hash(into hasher: inout Hasher) {
         attributesByName.hash(into: &hasher)
-    }
-}
-
-// MARK: Debugging
-
-extension Header: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "Header(" + attributes.map { $0.name + ": " + $0.type.debugDescription }.joined(separator: ", ") + ")"
     }
 }

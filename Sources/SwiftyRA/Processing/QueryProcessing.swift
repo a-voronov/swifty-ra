@@ -1,33 +1,5 @@
 public extension Query {
-    // TODO: add info about failed operation with path to it?
     // TODO: should run optimization on each execution step?
-    enum Errors: Error, Hashable {
-        /// no such attributes
-        case unknownAttributes(Set<AttributeName>)
-        /// same name, different types
-        case incompatibleAttributes([Pair<Attribute, Attribute>])
-        /// should be equal
-        case attributesNotUnionCompatible([Attribute], [Attribute])
-        /// should not share common attributes
-        case attributesNotDisjointed([Attribute], [Attribute])
-        /// should contain all attributes from another relation
-        case attributesNotSupersetToAnother([Attribute], [Attribute])
-        /// error while evaluating predicate
-        case predicate(Query.Predicate.Errors)
-    }
-
-    private func applyUnary(_ q: Query, _ op: (Relation) -> Relation.Throws<Relation>) -> Relation.Throws<Relation> {
-        q.execute().flatMap(op)
-    }
-
-    private func applyBinary(
-        _ lhs: Query,
-        _ rhs: Query,
-        _ op: (Relation, Relation) -> Relation.Throws<Relation>
-    ) -> Relation.Throws<Relation> {
-        zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(op)
-    }
-
     func execute() -> Relation.Throws<Relation> {
         switch self {
         case let .projection(attrs, q):           return applyUnary(q, project(attributes: attrs))
@@ -48,6 +20,18 @@ public extension Query {
         }
     }
 
+    private func applyUnary(_ q: Query, _ op: (Relation) -> Relation.Throws<Relation>) -> Relation.Throws<Relation> {
+        q.execute().flatMap(op)
+    }
+
+    private func applyBinary(
+        _ lhs: Query,
+        _ rhs: Query,
+        _ op: (Relation, Relation) -> Relation.Throws<Relation>
+    ) -> Relation.Throws<Relation> {
+        zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(op)
+    }
+
     private func project(attributes: Set<AttributeName>) -> (Relation) -> Relation.Throws<Relation> {
         return { r in r.state.flatMap { s in
             var projectedAttributes: [Attribute] = []
@@ -60,8 +44,8 @@ public extension Query {
                 }
                 projectedAttributes.append(attribute)
             }
-            guard errors.isEmpty else {
-                return .failure(.query(.unknownAttributes(errors)))
+            if let errs = errors.decompose().map(OneOrMore.few) {
+                return .failure(.query(.unknownAttributes(errs)))
             }
             return Header.create(attributes: projectedAttributes)
                 .mapError(Relation.Errors.header)
@@ -79,11 +63,11 @@ public extension Query {
     private func select(where predicate: Query.Predicate) -> (Relation) -> Relation.Throws<Relation> {
         return { r in r.state.flatMap { s in
             let errors = predicate.attributes.subtracting(s.header.attributes.map(\.name))
-            guard errors.isEmpty else {
-                return .failure(.query(.unknownAttributes(errors)))
+            if let errs = errors.decompose().map(OneOrMore.few) {
+                return .failure(.query(.unknownAttributes(errs)))
             }
             return s.tuples
-                .filter { predicate.eval(Query.Predicate.Context(values: $0.values)) }
+                .filter { predicate.execute(with: Query.Predicate.Context(values: $0.values)) }
                 .mapError(Query.Errors.predicate)
                 .mapError(Relation.Errors.query)
                 .map { Relation(header: s.header, tuples: $0) }
@@ -93,7 +77,7 @@ public extension Query {
     private func rename(to new: AttributeName, from original: AttributeName) -> (Relation) -> Relation.Throws<Relation> {
         return { r in r.state.flatMap { s in
             guard let originalAttr = s.header[original], let originalIndex = s.header.attributes.firstIndex(of: originalAttr) else {
-                return .failure(.query(.unknownAttributes([original])))
+                return .failure(.query(.unknownAttributes(.one(original))))
             }
             var attributes = s.header.attributes
             attributes[originalIndex] = Attribute(name: new, type: originalAttr.type)
@@ -113,8 +97,8 @@ public extension Query {
     private func orderBy(attributes: [Pair<AttributeName, Query.SortingOrder>]) -> (Relation) -> Relation.Throws<Relation> {
         return { r in r.state.flatMap { s in
             let unknownAttributes = Set(attributes.map(\.left)).subtracting(s.header.attributes.map(\.name))
-            guard unknownAttributes.isEmpty else {
-                return .failure(.query(.unknownAttributes(unknownAttributes)))
+            if let errors = unknownAttributes.decompose().map(OneOrMore.few) {
+                return .failure(.query(.unknownAttributes(errors)))
             }
             return s.tuples.sorted { lhs, rhs in
                 for (attribute, order) in attributes.map(\.both) {
@@ -138,31 +122,26 @@ public extension Query {
     }
 
     private func intersect(_ one: Relation, with another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            guard l.header == r.header else {
-                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
-            }
-            let tuples = l.tuples.intersection(r.tuples)
-            return .success(Relation(header: l.header, tuples: tuples))
-        }
+        executeUnionCompatibleOperation(with: one, and: another) { $0.intersection($1) }
     }
 
     private func union(_ one: Relation, with another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
-            guard l.header == r.header else {
-                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
-            }
-            let tuples = l.tuples.union(r.tuples)
-            return .success(Relation(header: l.header, tuples: tuples))
-        }
+        executeUnionCompatibleOperation(with: one, and: another) { $0.union($1) }
     }
 
     private func subtract(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
+        executeUnionCompatibleOperation(with: one, and: another) { $0.subtracting($1) }
+    }
+
+    private func executeUnionCompatibleOperation(with one: Relation, and another: Relation, operation: (Tuples, Tuples) -> Tuples) -> Relation.Throws<Relation> {
         zip(one.state, another.state).mapError(\.value).flatMap { l, r in
             guard l.header == r.header else {
-                return .failure(.query(.attributesNotUnionCompatible(l.header.attributes, r.header.attributes)))
+                guard let (lErrs, rErrs) = zip(l.header.attributes.decompose(), r.header.attributes.decompose()).map(OneOrMore.tupleOfFew) else {
+                    return .failure(.header(.empty))
+                }
+                return .failure(.query(.attributesNotUnionCompatible(lErrs, rErrs)))
             }
-            let tuples = l.tuples.subtracting(r.tuples)
+            let tuples = operation(l.tuples, r.tuples)
             return .success(Relation(header: l.header, tuples: tuples))
         }
     }
@@ -172,7 +151,10 @@ public extension Query {
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
             guard Set(lAttrs).isDisjoint(with: rAttrs) else {
-                return .failure(.query(.attributesNotDisjointed(lAttrs, rAttrs)))
+                guard let (lErrs, rErrs) = zip(lAttrs.decompose(), rAttrs.decompose()).map(OneOrMore.tupleOfFew) else {
+                    return .failure(.header(.empty))
+                }
+                return .failure(.query(.attributesNotDisjointed(lErrs, rErrs)))
             }
             return Header.create(attributes: lAttrs + rAttrs)
                 .mapError(Relation.Errors.header)
@@ -192,7 +174,10 @@ public extension Query {
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
             guard Set(lAttrs).isSuperset(of: rAttrs) else {
-                return .failure(.query(.attributesNotSupersetToAnother(lAttrs, rAttrs)))
+                guard let (lErrs, rErrs) = zip(lAttrs.decompose(), rAttrs.decompose()).map(OneOrMore.tupleOfFew) else {
+                    return .failure(.header(.empty))
+                }
+                return .failure(.query(.attributesNotSupersetToAnother(lErrs, rErrs)))
             }
             let uniqueAttributes = Set(Set(lAttrs).subtracting(rAttrs).map(\.name))
 
@@ -238,12 +223,14 @@ public extension Query {
                     attributes.append(rhs)
                 case (nil, nil):
                     // this case won't happen, as attributes are taken from both headers only, but we need to satisfy compiler
-                    return .failure(.query(.unknownAttributes([attributeName])))
+                    return .failure(.query(.unknownAttributes(.one(attributeName))))
                 }
             }
-            guard errors.isEmpty else {
-                return .failure(.query(.incompatibleAttributes(errors)))
+
+            if let errs = errors.decompose().map(OneOrMore.few) {
+                return .failure(.query(.incompatibleAttributes(errs)))
             }
+
             return Header.create(attributes: attributes)
                 .mapError(Relation.Errors.header)
                 .flatMap { header in
@@ -254,7 +241,7 @@ public extension Query {
                                 acc && lt[attribute] == rt[attribute]
                             }
                             let values = lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig })
-                            let result = predicate?.eval(Query.Predicate.Context(values: values)) ?? .success(true)
+                            let result = predicate?.execute(with: Query.Predicate.Context(values: values)) ?? .success(true)
                             return result
                                 .mapError(Query.Errors.predicate)
                                 .mapError(Relation.Errors.query)
