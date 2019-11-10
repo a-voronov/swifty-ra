@@ -18,13 +18,14 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        print(r.header.value!["id"])
+        let s = r.project(attributes: ["age"])
+
         print(r.id)
         print(r.age > 20 && r.hobby != nil)
         print(Query.Predicate.StringOperation.upper(.member(r.name)))
         print(val("id").debugDescription)
 
-        print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .relation(r)), .rename("years", "age", .relation(r))))
+        print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .relation(r)), .join(.natural, .projection(["age"], .relation(r)), .rename("years", "age", .relation(s)))))
     }
     
     func testProjection() {

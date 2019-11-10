@@ -123,24 +123,58 @@ extension Query.SortingOrder: CustomDebugStringConvertible {
 }
 
 extension Query: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    private func description(_ relNum: (Relation) -> Int) -> String {
         switch self {
-        // TODO: think of something for naming relations (iterator with growing letters? should cache seen relation somehow to match same letter?)
-        case let .relation(_): return "R"
-        case let .projection(attributes, query):  return "π \(attributes.joined(separator: ", ")) ( \(query) )"
-        case let .selection(predicate, query):  return "σ \(predicate) ( \(query) )"
-        case let .rename(to, from, query):  return "ρ \(to) ← \(from) ( \(query) )"
-        case let .orderBy(attributes, query):  return "τ \(attributes.map { "\($0.left) \($0.right)" }.joined(separator: ", ")) ( \(query) )"
-        case let .intersection(lhs, rhs):  return "( \(lhs) ) ∩ ( \(rhs) )"
-        case let .union(lhs, rhs):  return "( \(lhs) ) ∪ ( \(rhs) )"
-        case let .subtraction(lhs, rhs):  return "( \(lhs) ) - ( \(rhs) )"
-        case let .product(lhs, rhs):  return "( \(lhs) ) ⨯ ( \(rhs) )"
-        case let .division(lhs, rhs):  return "( \(lhs) ) ÷ ( \(rhs) )"
-        case let .join(.natural, lhs, rhs):  return "( \(lhs) ) ⋈ ( \(rhs) )"
-        case let .join(.theta(predicate), lhs, rhs):  return "( \(lhs) ) ⋈ \(predicate) ( \(rhs) )"
-        case let .join(.semi(.left), lhs, rhs):  return "( \(lhs) ) ⋉ ( \(rhs) )"
-        case let .join(.semi(.right), lhs, rhs):  return "( \(lhs) ) ⋊ ( \(rhs) )"
-        case let .join(.semi(.anti), lhs, rhs):  return "( \(lhs) ) ▷ ( \(rhs) )"
+        case let .relation(r):
+            let number = relNum(r)
+            let numberDescription = number > 0 ? "\(number)" : ""
+            return "R\(numberDescription)"
+        case let .projection(attributes, query):
+            return "π \(attributes.joined(separator: ", ")) ( \(query.description(relNum)) )"
+        case let .selection(predicate, query):
+            return "σ \(predicate) ( \(query.description(relNum)) )"
+        case let .rename(to, from, query):
+            return "ρ \(to) ← \(from) ( \(query.description(relNum)) )"
+        case let .orderBy(attributes, query):
+            return "τ \(attributes.map { "\($0.left) \($0.right)" }.joined(separator: ", ")) ( \(query.description(relNum)) )"
+        case let .intersection(lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ∩ ( \(rhs.description(relNum)) )"
+        case let .union(lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ∪ ( \(rhs.description(relNum)) )"
+        case let .subtraction(lhs, rhs):
+            return "( \(lhs.description(relNum)) ) - ( \(rhs.description(relNum)) )"
+        case let .product(lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ⨯ ( \(rhs.description(relNum)) )"
+        case let .division(lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ÷ ( \(rhs.description(relNum)) )"
+        case let .join(.natural, lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ⋈ ( \(rhs.description(relNum)) )"
+        case let .join(.theta(predicate), lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ⋈ \(predicate) ( \(rhs.description(relNum)) )"
+        case let .join(.semi(.left), lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ⋉ ( \(rhs.description(relNum)) )"
+        case let .join(.semi(.right), lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ⋊ ( \(rhs.description(relNum)) )"
+        case let .join(.semi(.anti), lhs, rhs):
+            return "( \(lhs.description(relNum)) ) ▷ ( \(rhs.description(relNum)) )"
+        }
+    }
+
+    public var debugDescription: String {
+        var cache: [Int: Int] = [:]
+        var relNum = 0
+
+        return description { r in
+            // still not sure about this solution to identify Relation struct, but it works for now
+            let addr = unsafeBitCast(r, to: Int.self)
+            if let seen = cache[addr] {
+                return seen
+            } else {
+                let num = relNum
+                cache[addr] = num
+                relNum += 1
+                return num
+            }
         }
     }
 }
