@@ -9,15 +9,15 @@ public extension Value {
     }
 }
 
-// MARK: Predicate
+// MARK: Expression
 
-public extension Query.Predicate {
-    typealias Throws<T> = Result<T, Query.Predicate.Errors>
+public extension Expression {
+    typealias Throws<T> = Result<T, ExpressionErrors>
+}
 
-    enum Errors: Error, Hashable {
-        case value(Value.Errors)
-        case unknownAttribute(AttributeName)
-    }
+public enum ExpressionErrors: Error, Hashable {
+    case value(Value.Errors)
+    case unknownAttribute(AttributeName)
 }
 
 // MARK: Query
@@ -35,7 +35,7 @@ public extension Query {
         /// should contain all attributes from another relation
         case attributesNotSupersetToAnother(OneOrMore<Attribute>, OneOrMore<Attribute>)
         /// error while evaluating predicate
-        case predicate(Query.Predicate.Errors)
+        case expression(ExpressionErrors)
     }
 }
 

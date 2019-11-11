@@ -19,7 +19,7 @@ extension Value: ExpressibleByIntegerLiteral { public init(integerLiteral value:
 extension Value: ExpressibleByFloatLiteral   { public init(floatLiteral value: Float)   { self = .float(value)   } }
 extension Value: ExpressibleByNilLiteral     { public init(nilLiteral: ())              { self = .none           } }
 
-// MARK: Helper getters
+// MARK: Helper Getters
 
 public extension Value {
     var hasValue: Bool {
@@ -44,6 +44,26 @@ public extension Value {
     var float: Float? {
         guard case let .float(value) = self else { return nil }
         return value
+    }
+}
+
+// MARK: Casting
+
+public extension Value {
+    var asBoolean: Throws<Bool> {
+        Throws(value: boolean, error: .mismatch(.one(self), .one(.boolean)))
+    }
+
+    var asString: Throws<String> {
+        Throws(value: string, error: .mismatch(.one(self), .one(.string)))
+    }
+
+    var asInteger: Throws<Int> {
+        Throws(value: integer, error: .mismatch(.one(self), .one(.integer)))
+    }
+
+    var asFloat: Throws<Float> {
+        Throws(value: float, error: .mismatch(.one(self), .one(.float)))
     }
 }
 

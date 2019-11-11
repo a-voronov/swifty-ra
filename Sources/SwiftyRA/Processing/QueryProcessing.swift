@@ -12,7 +12,7 @@ public extension Query {
         case let .product(lhs, rhs):              return applyBinary(lhs, rhs, product)
         case let .division(lhs, rhs):             return applyBinary(lhs, rhs, divide)
         case let .join(.natural, lhs, rhs):       return applyBinary(lhs, rhs, naturalJoin)
-        case let .join(.theta(p), lhs, rhs):      return applyBinary(lhs, rhs, thetaJoin(where: p))
+        case let .join(.theta(exp), lhs, rhs):    return applyBinary(lhs, rhs, thetaJoin(where: exp))
         case let .join(.semi(.left), lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
         case let .join(.semi(.right), lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
         case let .join(.semi(.anti), lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
@@ -29,7 +29,7 @@ public extension Query {
         _ rhs: Query,
         _ op: (Relation, Relation) -> Relation.Throws<Relation>
     ) -> Relation.Throws<Relation> {
-        zip(lhs.execute(), rhs.execute()).mapError(\.value).flatMap(op)
+        zip(lhs.execute(), rhs.execute()).flatMap(op)
     }
 
     private func project(attributes: Set<AttributeName>) -> (Relation) -> Relation.Throws<Relation> {
@@ -60,15 +60,14 @@ public extension Query {
         }}
     }
 
-    private func select(where predicate: Query.Predicate) -> (Relation) -> Relation.Throws<Relation> {
+    private func select(where predicate: BooleanExpression) -> (Relation) -> Relation.Throws<Relation> {
         return { r in r.state.flatMap { s in
             let errors = predicate.attributes.subtracting(s.header.attributes.map(\.name))
             if let errs = errors.decompose().map(OneOrMore.few) {
                 return .failure(.query(.unknownAttributes(errs)))
             }
-            return s.tuples
-                .filter { predicate.execute(with: Query.Predicate.Context(values: $0.values)) }
-                .mapError(Query.Errors.predicate)
+            return s.tuples.filter { predicate.executeAndCast(with: ExpressionContext(values: $0.values)) }
+                .mapError(Query.Errors.expression)
                 .mapError(Relation.Errors.query)
                 .map { Relation(header: s.header, tuples: $0) }
         }}
@@ -134,7 +133,7 @@ public extension Query {
     }
 
     private func executeUnionCompatibleOperation(with one: Relation, and another: Relation, operation: (Tuples, Tuples) -> Tuples) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+        zip(one.state, another.state).flatMap { l, r in
             guard l.header == r.header else {
                 guard let (lErrs, rErrs) = zip(l.header.attributes.decompose(), r.header.attributes.decompose()).map(OneOrMore.tupleOfFew) else {
                     return .failure(.header(.empty))
@@ -147,7 +146,7 @@ public extension Query {
     }
 
     private func product(_ one: Relation, with another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+        zip(one.state, another.state).flatMap { l, r in
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
             guard Set(lAttrs).isDisjoint(with: rAttrs) else {
@@ -170,7 +169,7 @@ public extension Query {
     }
 
     private func divide(_ one: Relation, by another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+        zip(one.state, another.state).flatMap { l, r in
             let lAttrs = l.header.attributes
             let rAttrs = r.header.attributes
             guard Set(lAttrs).isSuperset(of: rAttrs) else {
@@ -195,14 +194,14 @@ public extension Query {
         innerJoin(one, and: another, on: nil)
     }
 
-    private func thetaJoin(where predicate: Query.Predicate) -> (Relation, Relation) -> Relation.Throws<Relation> {
+    private func thetaJoin(where predicate: BooleanExpression) -> (Relation, Relation) -> Relation.Throws<Relation> {
         return { one, another in
             self.innerJoin(one, and: another, on: predicate)
         }
     }
 
-    private func innerJoin(_ one: Relation, and another: Relation, on predicate: Query.Predicate?) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+    private func innerJoin(_ one: Relation, and another: Relation, on predicate: BooleanExpression?) -> Relation.Throws<Relation> {
+        zip(one.state, another.state).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
             let rAttrs = r.header.attributes.map(\.name)
             let attributeNamesUnion = Set(lAttrs).union(rAttrs)
@@ -236,14 +235,14 @@ public extension Query {
                 .flatMap { header in
                     let commonAttributeNames = Set(lAttrs).intersection(rAttrs)
                     let tuples = l.tuples.flatMap { lt in
-                        r.tuples.compactMap { rt -> Result<Tuple?, Relation.Errors> in
+                        r.tuples.compactMap { rt -> Relation.Throws<Tuple?> in
                             let shouldJoin = commonAttributeNames.reduce(true) { acc, attribute in
                                 acc && lt[attribute] == rt[attribute]
                             }
                             let values = lt.values.merging(rt.values, uniquingKeysWith: { orig, _ in orig })
-                            let result = predicate?.execute(with: Query.Predicate.Context(values: values)) ?? .success(true)
+                            let result = predicate?.executeAndCast(with: ExpressionContext(values: values)) ?? .success(true)
                             return result
-                                .mapError(Query.Errors.predicate)
+                                .mapError(Query.Errors.expression)
                                 .mapError(Relation.Errors.query)
                                 .map { res in shouldJoin && res ? Tuple(values: values) : nil }
                         }
@@ -254,7 +253,7 @@ public extension Query {
     }
 
     private func leftSemiJoin(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+        zip(one.state, another.state).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
             return Query.projection(Set(lAttrs), .join(.natural, .relation(one), .relation(another))).execute()
         }
@@ -265,7 +264,7 @@ public extension Query {
     }
 
     private func antiSemiJoin(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
-        zip(one.state, another.state).mapError(\.value).flatMap { l, r in
+        zip(one.state, another.state).flatMap { l, r in
             Query.subtraction(.relation(one), .join(.semi(.left), .relation(one), .relation(another))).execute()
         }
     }

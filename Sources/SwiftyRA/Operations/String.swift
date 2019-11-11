@@ -1,3 +1,5 @@
+infix operator ++: AdditionPrecedence
+
 public extension Value {
     func length() -> Throws<Value> {
         Throws(
@@ -17,6 +19,13 @@ public extension Value {
         Throws(
             value: string.map { $0.uppercased() }.map(Value.string),
             error: .mismatch(.one(self), .one(.string))
+        )
+    }
+
+    static func ++ (lhs: Value, rhs: Value) -> Throws<Value> {
+        Throws(
+            value: zip(lhs.string, rhs.string).map(+).map(Value.string),
+            error: .mismatch(.few(lhs, rhs), .one(.string))
         )
     }
 }

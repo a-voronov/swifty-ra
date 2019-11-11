@@ -47,8 +47,8 @@ public struct Relation {
         state.map(\.tuples)
     }
 
-    // TODO: not yet sure if it's a good idea, but definitely looks nice with predicate :)
-    public subscript(dynamicMember member: AttributeName) -> Query.Predicate.Member {
+    // TODO: not yet sure if it's a good idea, but definitely looks nice with expressions :)
+    public subscript(dynamicMember member: AttributeName) -> MemberExpression {
         atr(member)
     }
 
@@ -100,15 +100,15 @@ public extension Relation {
         }
     }
 
+//    func project(attributes: Set<AttributeName>, expressions: [AttributeName: Expression] = [:]) -> Relation {
     func project(attributes: Set<AttributeName>) -> Relation {
         withUnaryQuery { q in .projection(attributes, q) }
     }
 
-    func select(where predicate: Query.Predicate) -> Relation {
+    func select(where predicate: BooleanExpression) -> Relation {
         withUnaryQuery { q in .selection(predicate, q) }
     }
 
-    // TODO: allow renaming multiple attributes
     func rename(to newAttribute: AttributeName, from originalAttribute: AttributeName) -> Relation {
         withUnaryQuery { q in .rename(newAttribute, originalAttribute, q) }
     }
@@ -137,7 +137,7 @@ public extension Relation {
         withBinaryQuery(another: another, transform: Query.division)
     }
 
-    func join(with another: Relation, on predicate: Query.Predicate? = nil) -> Relation {
+    func join(with another: Relation, on predicate: BooleanExpression? = nil) -> Relation {
         withBinaryQuery(another: another) { lq, rq in .join(predicate.map(Query.Join.theta) ?? .natural, lq, rq) }
     }
 

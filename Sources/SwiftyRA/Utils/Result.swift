@@ -55,10 +55,17 @@ extension Result {
     }
 }
 
-/// Zip 2 Results
+/// Zip 2 Results with different errors
 func zip<A, B, E: Error, F: Error>(_ a: Result<A, E>, _ b: Result<B, F>) -> Result<(A, B), Either<E, F>> {
     a.mapError(Either.left).flatMap { a in
         b.mapError(Either.right).map { b in (a, b) }
+    }
+}
+
+/// Zip 2 Results with same errors
+func zip<A, B, E: Error>(_ a: Result<A, E>, _ b: Result<B, E>) -> Result<(A, B), E> {
+    a.flatMap { a in
+        b.map { b in (a, b) }
     }
 }
 

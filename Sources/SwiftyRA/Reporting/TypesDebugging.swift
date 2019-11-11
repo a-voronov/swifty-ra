@@ -40,9 +40,9 @@ extension Attribute: CustomDebugStringConvertible {
     }
 }
 
-// MARK: Predicate
+// MARK: Expressions
 
-extension Query.Predicate.Member: CustomDebugStringConvertible {
+extension MemberExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
         case let .atr(attribute): return attribute
@@ -51,62 +51,65 @@ extension Query.Predicate.Member: CustomDebugStringConvertible {
     }
 }
 
-extension Query.Predicate.NumericOperation: CustomDebugStringConvertible {
+extension NumericExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case let .member(m):       return m.debugDescription
-        case let .add(lhs, rhs):   return "(\(lhs) + \(rhs))"
-        case let .sub(lhs, rhs):   return "(\(lhs) - \(rhs))"
-        case let .mul(lhs, rhs):   return "\(lhs) * \(rhs)"
-        case let .div(lhs, rhs):   return "\(lhs) / \(rhs)"
-        case let .mod(lhs, rhs):   return "(\(lhs) % \(rhs))"
-        case let .round(rule, op): return "round(\(rule): \(op))"
-        case let .length(op):      return "length(\(op))"
+        case let .just(member):     return member.debugDescription
+        case let .add(lhs, rhs):    return "(\(lhs) + \(rhs))"
+        case let .sub(lhs, rhs):    return "(\(lhs) - \(rhs))"
+        case let .mul(lhs, rhs):    return "\(lhs) * \(rhs)"
+        case let .div(lhs, rhs):    return "\(lhs) / \(rhs)"
+        case let .mod(lhs, rhs):    return "(\(lhs) % \(rhs))"
+        case let .round(rule, exp): return "round(\(rule): \(exp))"
+        case let .length(exp):      return "length(\(exp))"
         }
     }
 }
 
-extension Query.Predicate.StringOperation: CustomDebugStringConvertible {
+extension StringExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case let .member(m): return m.debugDescription
-        case let .lower(op): return "lower(\(op))"
-        case let .upper(op): return "upper(\(op))"
+        case let .just(member):     return member.debugDescription
+        case let .lower(exp):       return "lower(\(exp))"
+        case let .upper(exp):       return "upper(\(exp))"
+        case let .concat(lhs, rhs): return "\(lhs) ++ \(rhs)"
         }
     }
 }
 
-extension Query.Predicate.Operators {
+extension BooleanExpression.Operands {
     fileprivate var lhsDebugDescription: String {
         switch self {
         case let .any(lhs, _):     return lhs.debugDescription
-        case let .numbers(lhs, _): return lhs.debugDescription
-        case let .strings(lhs, _): return lhs.debugDescription
+        case let .numeric(lhs, _): return lhs.debugDescription
+        case let .string(lhs, _):  return lhs.debugDescription
+        case let .boolean(lhs, _): return lhs.debugDescription
         }
     }
 
     fileprivate var rhsDebugDescription: String {
         switch self {
         case let .any(_, rhs):     return rhs.debugDescription
-        case let .numbers(_, rhs): return rhs.debugDescription
-        case let .strings(_, rhs): return rhs.debugDescription
+        case let .numeric(_, rhs): return rhs.debugDescription
+        case let .string(_, rhs):  return rhs.debugDescription
+        case let .boolean(_, rhs): return rhs.debugDescription
         }
     }
 }
 
-extension Query.Predicate: CustomDebugStringConvertible {
+extension BooleanExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case let .member(m):     return m.debugDescription
+        case let .just(member):  return member.debugDescription
         case let .and(lhs, rhs): return "\(lhs) and \(rhs)"
         case let .or(lhs, rhs):  return "\(lhs) or \(rhs)"
-        case let .not(p):        return "not \(p)"
-        case let .eq(op):        return "\(op.lhsDebugDescription) = \(op.rhsDebugDescription)"
-        case let .neq(op):       return "\(op.lhsDebugDescription) ≠ \(op.rhsDebugDescription)"
-        case let .gt(op):        return "\(op.lhsDebugDescription) > \(op.rhsDebugDescription)"
-        case let .lt(op):        return "\(op.lhsDebugDescription) < \(op.rhsDebugDescription)"
-        case let .ge(op):        return "\(op.lhsDebugDescription) ≥ \(op.rhsDebugDescription)"
-        case let .le(op):        return "\(op.lhsDebugDescription) ≤ \(op.rhsDebugDescription)"
+        case let .not(exp):      return "not \(exp)"
+        case let .eq(exp):       return "\(exp.lhsDebugDescription) = \(exp.rhsDebugDescription)"
+        case let .neq(exp):      return "\(exp.lhsDebugDescription) ≠ \(exp.rhsDebugDescription)"
+        case let .gt(exp):       return "\(exp.lhsDebugDescription) > \(exp.rhsDebugDescription)"
+        case let .lt(exp):       return "\(exp.lhsDebugDescription) < \(exp.rhsDebugDescription)"
+        case let .ge(exp):       return "\(exp.lhsDebugDescription) ≥ \(exp.rhsDebugDescription)"
+        case let .le(exp):       return "\(exp.lhsDebugDescription) ≤ \(exp.rhsDebugDescription)"
         }
     }
 }

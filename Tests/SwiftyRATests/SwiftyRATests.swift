@@ -22,10 +22,15 @@ final class SwiftyRATests: XCTestCase {
 
         print(r.id)
         print(r.age > 20 && r.hobby != nil)
-        print(Query.Predicate.StringOperation.upper(.member(r.name)))
+        print(StringExpression.upper(.just(r.name)))
         print(val("id").debugDescription)
 
         print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .relation(r)), .join(.natural, .projection(["age"], .relation(r)), .rename("years", "age", .relation(s)))))
+
+//        let o = r.project(attributes: [], expressions: [
+//            "description": atr("name") ++ " " ++ atr("hobby"),
+//            "hasHobby": atr("hobby") != nil
+//        ])
     }
     
     func testProjection() {

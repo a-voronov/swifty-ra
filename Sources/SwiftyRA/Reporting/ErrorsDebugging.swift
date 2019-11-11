@@ -19,7 +19,7 @@ extension Value.Errors: CustomDebugStringConvertible {
 
 // MARK: Predicate
 
-extension Query.Predicate.Errors: CustomDebugStringConvertible {
+extension ExpressionErrors: CustomDebugStringConvertible {
     public var debugDescription: String {
         ""
     }

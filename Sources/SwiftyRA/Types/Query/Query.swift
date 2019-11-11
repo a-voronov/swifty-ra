@@ -22,15 +22,25 @@ public indirect enum Query: Hashable {
 
         // if no common attributes = product
         case natural
-        case theta(Predicate)
+        case theta(BooleanExpression)
         case semi(Semi)
     }
 
     case relation(Relation)
 
+    // TODO: allow expressions for attributes [AttributeName: Expression]
+    //                                         ^              ^
+    //                                         new            should use existing attributes
+    //
+    // Example:
+    // π c.id, lower(username)->user, concat(firstname, concat(' ', lastname))->fullname (
+    //    ρ c ( Customer )
+    // )
+    //
     case projection(Set<AttributeName>, Query)
     // restriction
-    case selection(Predicate, Query)
+    case selection(BooleanExpression, Query)
+    // TODO: allow renaming multiple attributes
     case rename(AttributeName, AttributeName, Query)
     case orderBy([Pair<AttributeName, SortingOrder>], Query)
     // case groupBy(???, Query) <- should implement it?
