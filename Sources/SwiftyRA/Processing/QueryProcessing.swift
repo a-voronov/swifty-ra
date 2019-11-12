@@ -2,6 +2,7 @@ public extension Query {
     // TODO: should run optimization on each execution step?
     func execute() -> Relation.Throws<Relation> {
         switch self {
+        case let .project(args, q):               return applyUnary(q, project(arguments: args))
         case let .projection(attrs, q):           return applyUnary(q, project(attributes: attrs))
         case let .selection(predicate, q):        return applyUnary(q, select(where: predicate))
         case let .rename(to, from, q):            return applyUnary(q, rename(to: to, from: from))
@@ -16,7 +17,7 @@ public extension Query {
         case let .join(.semi(.left), lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
         case let .join(.semi(.right), lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
         case let .join(.semi(.anti), lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
-        case let .relation(r):                    return .success(r)
+        case let .just(r):                        return .success(r)
         }
     }
 
@@ -30,6 +31,12 @@ public extension Query {
         _ op: (Relation, Relation) -> Relation.Throws<Relation>
     ) -> Relation.Throws<Relation> {
         zip(lhs.execute(), rhs.execute()).flatMap(op)
+    }
+
+    private func project(arguments: Query.ProjectionArguments) -> (Relation) -> Relation.Throws<Relation> {
+        return { r in
+            .success(r)
+        }
     }
 
     private func project(attributes: Set<AttributeName>) -> (Relation) -> Relation.Throws<Relation> {
@@ -180,9 +187,9 @@ public extension Query {
             }
             let uniqueAttributes = Set(Set(lAttrs).subtracting(rAttrs).map(\.name))
 
-            let ur = Query.projection(uniqueAttributes, .relation(one))
-            let t = Query.product(ur, .relation(another))
-            let u = Query.subtraction(t, .relation(one))
+            let ur = Query.projection(uniqueAttributes, .just(one))
+            let t = Query.product(ur, .just(another))
+            let u = Query.subtraction(t, .just(one))
             let v = Query.projection(uniqueAttributes, u)
             let w = Query.subtraction(ur, v)
 
@@ -255,7 +262,7 @@ public extension Query {
     private func leftSemiJoin(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
         zip(one.state, another.state).flatMap { l, r in
             let lAttrs = l.header.attributes.map(\.name)
-            return Query.projection(Set(lAttrs), .join(.natural, .relation(one), .relation(another))).execute()
+            return Query.projection(Set(lAttrs), .join(.natural, .just(one), .just(another))).execute()
         }
     }
 
@@ -265,7 +272,7 @@ public extension Query {
 
     private func antiSemiJoin(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
         zip(one.state, another.state).flatMap { l, r in
-            Query.subtraction(.relation(one), .join(.semi(.left), .relation(one), .relation(another))).execute()
+            Query.subtraction(.just(one), .join(.semi(.left), .just(one), .just(another))).execute()
         }
     }
 }

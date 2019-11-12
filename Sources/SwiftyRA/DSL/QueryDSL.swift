@@ -1,3 +1,5 @@
+// MARK: Query
+
 // All operators are left associative.
 // Operator Precedense: high 0 -> low 4
 
@@ -25,3 +27,18 @@
 //infix operator ⋉
 //infix operator ⋊
 //infix operator ▷
+
+// MARK: Projection
+
+extension Query.ProjectionArgument: ExpressibleByStringLiteral  {
+    public init(stringLiteral value: String) {
+        self.init(attribute: value, expression: nil)
+    }
+}
+
+infix operator <-: AssignmentPrecedence
+
+public func <- (_ lhs: AttributeName, _ rhs: MemberExpression)  -> Query.ProjectionArgument { .init(attribute: lhs, expression: .member(rhs)) }
+public func <- (_ lhs: AttributeName, _ rhs: BooleanExpression) -> Query.ProjectionArgument { .init(attribute: lhs, expression: .boolean(rhs)) }
+public func <- (_ lhs: AttributeName, _ rhs: NumericExpression) -> Query.ProjectionArgument { .init(attribute: lhs, expression: .numeric(rhs)) }
+public func <- (_ lhs: AttributeName, _ rhs: StringExpression)  -> Query.ProjectionArgument { .init(attribute: lhs, expression: .string(rhs)) }

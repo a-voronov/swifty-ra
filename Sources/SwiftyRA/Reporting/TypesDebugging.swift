@@ -128,10 +128,12 @@ extension Query.SortingOrder: CustomDebugStringConvertible {
 extension Query: CustomDebugStringConvertible {
     private func description(_ relNum: (Relation) -> Int) -> String {
         switch self {
-        case let .relation(r):
+        case let .just(r):
             let number = relNum(r)
             let numberDescription = number > 0 ? "\(number)" : ""
             return "R\(numberDescription)"
+        case let .project(args, query):
+            return "π TODO: ( \(query.description(relNum)) )"
         case let .projection(attributes, query):
             return "π \(attributes.joined(separator: ", ")) ( \(query.description(relNum)) )"
         case let .selection(predicate, query):

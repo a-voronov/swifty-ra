@@ -85,14 +85,14 @@ public struct Relation {
 public extension Relation {
     private func withUnaryQuery(_ transform: (Query) -> Query) -> Relation {
         innerState.value.map(\.query)
-            .map { q in Relation(query: transform(q ?? .relation(self))) }
+            .map { q in Relation(query: transform(q ?? .just(self))) }
             .value ?? self
     }
 
     private func withBinaryQuery(another: Relation, transform: (Query, Query) -> Query) -> Relation {
         switch (innerState.value, another.innerState.value) {
         case let (.success(l), .success(r)):
-            return Relation(query: transform(l.query ?? .relation(self), r.query ?? .relation(another)))
+            return Relation(query: transform(l.query ?? .just(self), r.query ?? .just(another)))
         case (.failure, _):
             return self
         case (_, .failure):
@@ -100,9 +100,12 @@ public extension Relation {
         }
     }
 
-//    func project(attributes: Set<AttributeName>, expressions: [AttributeName: Expression] = [:]) -> Relation {
     func project(attributes: Set<AttributeName>) -> Relation {
         withUnaryQuery { q in .projection(attributes, q) }
+    }
+
+    func project(arguments: Query.ProjectionArgument...) -> Relation {
+        withUnaryQuery { q in .project(arguments, q) }
     }
 
     func select(where predicate: BooleanExpression) -> Relation {
