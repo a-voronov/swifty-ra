@@ -60,6 +60,28 @@ public struct ExpressionContext: Hashable {
     }
 }
 
+// MARK: - Any
+
+extension AnyExpression {
+    public var attributes: Set<AttributeName> {
+        switch self {
+        case let .member(exp):  return exp.attributes
+        case let .boolean(exp): return exp.attributes
+        case let .numeric(exp): return exp.attributes
+        case let .string(exp):  return exp.attributes
+        }
+    }
+
+    public func execute(with context: ExpressionContext) -> Throws<Value> {
+        switch self {
+        case let .member(exp):  return exp.execute(with: context)
+        case let .boolean(exp): return exp.execute(with: context)
+        case let .numeric(exp): return exp.execute(with: context)
+        case let .string(exp):  return exp.execute(with: context)
+        }
+    }
+}
+
 // MARK: - Member
 
 extension MemberExpression {

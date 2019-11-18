@@ -34,9 +34,85 @@ public extension Query {
     }
 
     private func project(arguments: Query.ProjectionArguments) -> (Relation) -> Relation.Throws<Relation> {
-        return { r in
-            .success(r)
-        }
+        return { r in r.state.flatMap { s in
+            var attributeTypes: [AttributeName: AttributeType] = [:]
+            // Checking for duplicates
+            var duplicates: Set<AttributeName> = []
+            let expressions: [AttributeName: AnyExpression] = arguments.reduce(into: [:]) { acc, arg in
+                guard acc[arg.attribute] == nil else {
+                    duplicates.insert(arg.attribute)
+                    return
+                }
+                if let expression = arg.expression {
+                    acc[arg.attribute] = expression
+                } else {
+                    acc[arg.attribute] = .member(.atr(arg.attribute))
+                    attributeTypes[arg.attribute] = s.header[arg.attribute]?.type
+                }
+            }
+            if let dups = duplicates.decompose().map(OneOrMore.few) {
+                return .failure(.query(.duplicatedAttributes(dups)))
+            }
+            // Checking for unknown attributes
+            let attributes: Set<AttributeName> = expressions.values.reduce([]) { acc, exp in
+                acc.union(exp.attributes)
+            }
+            let unknown = attributes.compactMap { attribute in
+                s.header[attribute] == nil
+                    ? attribute
+                    : nil
+            }
+            if let errs = unknown.decompose().map(OneOrMore.few) {
+                return .failure(.query(.unknownAttributes(errs)))
+            }
+            // Constructing new tuples and inferring scheme type
+            let tuples = s.tuples.map { tuple -> AnyExpression.Throws<Tuple> in
+                let ctx = ExpressionContext(values: tuple.values)
+                var values: [AttributeName: Value] = [:]
+
+                for (attribute, expression) in expressions {
+                    switch expression.execute(with: ctx) {
+                    case let .success(value):
+                        values[attribute] = value
+
+                        switch (value.type, attributeTypes[attribute]) {
+                        case let (valueType?, nil): attributeTypes[attribute] = .required(valueType)
+                        case let (nil, .required(valueType)): attributeTypes[attribute] = .optional(valueType)
+                        case let (valueType?, attributeType?):
+                            guard valueType == attributeType.valueType else {
+                                return .failure(.value(.mismatch(.one(value), .one(attributeType.valueType))))
+                            }
+                        default: break
+                        }
+                    case let .failure(error):
+                        return .failure(error)
+                    }
+                }
+                return .success(Tuple(values: values))
+            }
+            // Checking scheme type
+            var typeInferringErrors: [AttributeName] = []
+            let projectedAttributes: [Attribute] = arguments.compactMap { arg in
+                guard let attributeType = attributeTypes[arg.attribute] else {
+                    typeInferringErrors.append(arg.attribute)
+                    return nil
+                }
+                return Attribute(name: arg.attribute, type: attributeType)
+            }
+            if let errs = typeInferringErrors.decompose().map(OneOrMore.few) {
+                return .failure(.query(.typeInferring(errs)))
+            }
+            // Constructing header and relation
+            return tuples
+                .mapError(Query.Errors.expression)
+                .mapError(Relation.Errors.query)
+                .flatMap { tuples in
+                    Header.create(attributes: projectedAttributes)
+                        .mapError(Relation.Errors.header)
+                        .map { header in (header, tuples) }
+                }
+                .map(Relation.init)
+        }}
     }
 
     private func project(attributes: Set<AttributeName>) -> (Relation) -> Relation.Throws<Relation> {

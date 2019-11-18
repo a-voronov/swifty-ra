@@ -6,6 +6,8 @@ public extension Value {
         case let (.integer(l), .integer(r)): return .success(l == r)
         case let (.float(l),   .float(r)):   return .success(l == r)
         case     (.none,       .none):       return .success(true)
+        case     (.none,       _):           return .success(false)
+        case     (_,           .none):       return .success(false)
 
         default: return .failure(.incompatible(lhs, rhs))
         }

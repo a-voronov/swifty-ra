@@ -14,6 +14,15 @@ public enum AttributeType {
     case optional(ValueType)
 }
 
+public extension AttributeType {
+    var valueType: ValueType {
+        switch self {
+        case let .required(type): return type
+        case let .optional(type): return type
+        }
+    }
+}
+
 // MARK: Attribute Name
 
 public typealias AttributeName = String

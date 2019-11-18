@@ -27,7 +27,7 @@ final class SwiftyRATests: XCTestCase {
 
         print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .just(r)), .join(.natural, .projection(["age"], .just(r)), .rename("years", "age", .just(s)))))
 
-        let o = r.project(arguments: "age", "name" <- 2 + 4, "description" <- r.name ++ " " ++ r.hobby)
+        let o = r.project("age", "name" <- 2 + 4, "description" <- r.name ++ " " ++ r.hobby)
     }
     
     func testProjection() {
@@ -42,6 +42,21 @@ final class SwiftyRATests: XCTestCase {
         let s = r
             .project(attributes: ["id", "name", "hobby"])
             .project(attributes: ["id", "name"])
+
+        print(s)
+    }
+
+    func testProject() {
+        let r = Relation(
+            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
+            tuples: [
+                [1, "Alice", 21, "nil"],
+                [2, "Bob",   24, "cycling"],
+                [3, "Carol", 19, ""]
+            ]
+        )
+
+        let s = r.project("identifier" <- r.id, "name", "description" <- r.name ++ ": " ++ r.hobby)
 
         print(s)
     }
@@ -350,6 +365,7 @@ final class SwiftyRATests: XCTestCase {
     static var allTests = [
         ("testMisc", testMisc),
         ("testProjection", testProjection),
+        ("testProject", testProject),
         ("testSelection",  testSelection),
         ("testSelectionDynamicCall",  testSelectionDynamicCall),
         ("testRenaming",  testRenaming),

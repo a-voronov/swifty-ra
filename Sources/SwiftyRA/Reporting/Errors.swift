@@ -11,6 +11,10 @@ public extension Value {
 
 // MARK: Expression
 
+extension AnyExpression {
+    public typealias Throws<T> = Result<T, ExpressionErrors>
+}
+
 extension MemberExpression {
     public typealias Throws<T> = Result<T, ExpressionErrors>
 }
@@ -36,6 +40,8 @@ public enum ExpressionErrors: Error, Hashable {
 
 public extension Query {
     enum Errors: Error, Hashable {
+        /// same attributes were listed several times
+        case duplicatedAttributes(OneOrMore<AttributeName>)
         /// no such attributes
         case unknownAttributes(OneOrMore<AttributeName>)
         /// same name, different types
@@ -46,6 +52,8 @@ public extension Query {
         case attributesNotDisjointed(OneOrMore<Attribute>, OneOrMore<Attribute>)
         /// should contain all attributes from another relation
         case attributesNotSupersetToAnother(OneOrMore<Attribute>, OneOrMore<Attribute>)
+        /// could not infer type
+        case typeInferring(OneOrMore<AttributeName>)
         /// error while evaluating predicate
         case expression(ExpressionErrors)
     }

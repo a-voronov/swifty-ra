@@ -100,11 +100,12 @@ public extension Relation {
         }
     }
 
+    @available(*, deprecated, renamed: "project(_:)")
     func project(attributes: Set<AttributeName>) -> Relation {
         withUnaryQuery { q in .projection(attributes, q) }
     }
 
-    func project(arguments: Query.ProjectionArgument...) -> Relation {
+    func project(_ arguments: Query.ProjectionArgument...) -> Relation {
         withUnaryQuery { q in .project(arguments, q) }
     }
 

@@ -1,3 +1,5 @@
+// TODO: think of operations with `none` value. Return `none` as well even for binary ones?
+
 // MARK: Value
 
 /// Values allowed to be stored in relation tuples.
@@ -64,6 +66,18 @@ public extension Value {
 
     var asFloat: Throws<Float> {
         Throws(value: float, error: .mismatch(.one(self), .one(.float)))
+    }
+}
+
+public extension Value {
+    var type: ValueType? {
+        switch self {
+        case .boolean: return .boolean
+        case .string:  return .string
+        case .integer: return .integer
+        case .float:   return .float
+        case .none:    return nil
+        }
     }
 }
 
