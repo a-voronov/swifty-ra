@@ -2,22 +2,21 @@ public extension Query {
     // TODO: should run optimization on each execution step?
     func execute() -> Relation.Throws<Relation> {
         switch self {
-        case let .project(args, q):               return applyUnary(q, project(arguments: args))
-        case let .projection(attrs, q):           return applyUnary(q, project(attributes: attrs))
-        case let .selection(predicate, q):        return applyUnary(q, select(where: predicate))
-        case let .rename(to, from, q):            return applyUnary(q, rename(to: to, from: from))
-        case let .orderBy(attrs, q):              return applyUnary(q, orderBy(attributes: attrs))
-        case let .intersection(lhs, rhs):         return applyBinary(lhs, rhs, intersect)
-        case let .union(lhs, rhs):                return applyBinary(lhs, rhs, union)
-        case let .subtraction(lhs, rhs):          return applyBinary(lhs, rhs, subtract)
-        case let .product(lhs, rhs):              return applyBinary(lhs, rhs, product)
-        case let .division(lhs, rhs):             return applyBinary(lhs, rhs, divide)
-        case let .join(.natural, lhs, rhs):       return applyBinary(lhs, rhs, naturalJoin)
-        case let .join(.theta(exp), lhs, rhs):    return applyBinary(lhs, rhs, thetaJoin(where: exp))
-        case let .join(.semi(.left), lhs, rhs):   return applyBinary(lhs, rhs, leftSemiJoin)
-        case let .join(.semi(.right), lhs, rhs):  return applyBinary(lhs, rhs, rightSemiJoin)
-        case let .join(.semi(.anti), lhs, rhs):   return applyBinary(lhs, rhs, antiSemiJoin)
-        case let .just(r):                        return .success(r)
+        case let .projection(args, q):           return applyUnary(q, project(arguments: args))
+        case let .selection(predicate, q):       return applyUnary(q, select(where: predicate))
+        case let .rename(to, from, q):           return applyUnary(q, rename(to: to, from: from))
+        case let .orderBy(attrs, q):             return applyUnary(q, orderBy(attributes: attrs))
+        case let .intersection(lhs, rhs):        return applyBinary(lhs, rhs, intersect)
+        case let .union(lhs, rhs):               return applyBinary(lhs, rhs, union)
+        case let .subtraction(lhs, rhs):         return applyBinary(lhs, rhs, subtract)
+        case let .product(lhs, rhs):             return applyBinary(lhs, rhs, product)
+        case let .division(lhs, rhs):            return applyBinary(lhs, rhs, divide)
+        case let .join(.natural, lhs, rhs):      return applyBinary(lhs, rhs, naturalJoin)
+        case let .join(.theta(exp), lhs, rhs):   return applyBinary(lhs, rhs, thetaJoin(where: exp))
+        case let .join(.semi(.left), lhs, rhs):  return applyBinary(lhs, rhs, leftSemiJoin)
+        case let .join(.semi(.right), lhs, rhs): return applyBinary(lhs, rhs, rightSemiJoin)
+        case let .join(.semi(.anti), lhs, rhs):  return applyBinary(lhs, rhs, antiSemiJoin)
+        case let .just(r):                       return .success(r)
         }
     }
 
@@ -112,34 +111,6 @@ public extension Query {
                         .map { header in (header, tuples) }
                 }
                 .map(Relation.init)
-        }}
-    }
-
-    private func project(attributes: Set<AttributeName>) -> (Relation) -> Relation.Throws<Relation> {
-        return { r in r.state.flatMap { s in
-            var projectedAttributes: [Attribute] = []
-            var errors: Set<AttributeName> = []
-
-            for attributeName in attributes {
-                guard let attribute = s.header[attributeName] else {
-                    errors.insert(attributeName)
-                    continue
-                }
-                projectedAttributes.append(attribute)
-            }
-            if let errs = errors.decompose().map(OneOrMore.few) {
-                return .failure(.query(.unknownAttributes(errs)))
-            }
-            return Header.create(attributes: projectedAttributes)
-                .mapError(Relation.Errors.header)
-                .map { header in
-                    let tuples = s.tuples.map { tuple in
-                        Tuple(values: attributes.reduce(into: [:]) { acc, attributeName in
-                            acc[attributeName] = tuple[attributeName, default: .none]
-                        })
-                    }
-                    return Relation(header: header, tuples: tuples)
-                }
         }}
     }
 
@@ -261,7 +232,7 @@ public extension Query {
                 }
                 return .failure(.query(.attributesNotSupersetToAnother(lErrs, rErrs)))
             }
-            let uniqueAttributes = Set(Set(lAttrs).subtracting(rAttrs).map(\.name))
+            let uniqueAttributes = Set(lAttrs).subtracting(rAttrs).map(\.name).map(ProjectionArgument.init)
 
             let ur = Query.projection(uniqueAttributes, .just(one))
             let t = Query.product(ur, .just(another))
@@ -337,8 +308,8 @@ public extension Query {
 
     private func leftSemiJoin(_ one: Relation, and another: Relation) -> Relation.Throws<Relation> {
         zip(one.state, another.state).flatMap { l, r in
-            let lAttrs = l.header.attributes.map(\.name)
-            return Query.projection(Set(lAttrs), .join(.natural, .just(one), .just(another))).execute()
+            let lAttrs = Set(l.header.attributes.map(\.name)).map(ProjectionArgument.init)
+            return Query.projection(lAttrs, .join(.natural, .just(one), .just(another))).execute()
         }
     }
 

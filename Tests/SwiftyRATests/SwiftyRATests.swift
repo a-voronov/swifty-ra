@@ -18,7 +18,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let s = r.project(attributes: ["age"])
+        let s = r.project("age")
 
         print(r.id)
         print(r.age > 20 && r.hobby != nil)
@@ -40,23 +40,11 @@ final class SwiftyRATests: XCTestCase {
             ]
         )
         let s = r
-            .project(attributes: ["id", "name", "hobby"])
-            .project(attributes: ["id", "name"])
+            .project("id", "name", "hobbies" <- "hobby")
+            .project("id", "name")
 
-        print(s)
-    }
-
-    func testProject() {
-        let r = Relation(
-            header: ["id": .required(.integer), "name": .required(.string), "age": .required(.integer), "hobby": .optional(.string)],
-            tuples: [
-                [1, "Alice", 21, "nil"],
-                [2, "Bob",   24, "cycling"],
-                [3, "Carol", 19, ""]
-            ]
-        )
-
-        let s = r.project("identifier" <- r.id, "name", "description" <- r.name ++ ": " ++ r.hobby)
+        // TODO: wait for operations with nil to return nil and check
+        // let s = r.project("identifier" <- r.id, "name", "description" <- r.name ++ ": " ++ r.hobby)
 
         print(s)
     }
@@ -365,7 +353,6 @@ final class SwiftyRATests: XCTestCase {
     static var allTests = [
         ("testMisc", testMisc),
         ("testProjection", testProjection),
-        ("testProject", testProject),
         ("testSelection",  testSelection),
         ("testSelectionDynamicCall",  testSelectionDynamicCall),
         ("testRenaming",  testRenaming),

@@ -15,17 +15,7 @@
 public indirect enum Query: Hashable {
     case just(Relation)
 
-    // TODO: allow expressions for attributes [AttributeName: Expression]
-    //                                         ^              ^
-    //                                         new            should use existing attributes
-    //
-    // Example:
-    // π c.id, lower(username)->user, concat(firstname, concat(' ', lastname))->fullname (
-    //    ρ c ( Customer )
-    // )
-    //
-    case project(ProjectionArguments, Query)
-    case projection(Set<AttributeName>, Query)
+    case projection(ProjectionArguments, Query)
     // restriction
     case selection(BooleanExpression, Query)
     // TODO: allow renaming multiple attributes

@@ -132,10 +132,9 @@ extension Query: CustomDebugStringConvertible {
             let number = relNum(r)
             let numberDescription = number > 0 ? "\(number)" : ""
             return "R\(numberDescription)"
-        case let .project(args, query):
+        case let .projection(args, query):
             return "π TODO: ( \(query.description(relNum)) )"
-        case let .projection(attributes, query):
-            return "π \(attributes.joined(separator: ", ")) ( \(query.description(relNum)) )"
+//            return "π \(attributes.joined(separator: ", ")) ( \(query.description(relNum)) )"
         case let .selection(predicate, query):
             return "σ \(predicate) ( \(query.description(relNum)) )"
         case let .rename(to, from, query):
