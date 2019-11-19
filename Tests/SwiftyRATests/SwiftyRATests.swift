@@ -25,9 +25,11 @@ final class SwiftyRATests: XCTestCase {
         print(StringExpression.upper(.just(r.name)))
         print(val("id").debugDescription)
 
-        print(Query.join(.theta(r.age > 20 && r.hobby != nil), .selection(r.age > 18, .just(r)), .join(.natural, .projection(["age"], .just(r)), .rename("years", "age", .just(s)))))
-
-        let o = r.project("age", "name" <- 2 + 4, "description" <- r.name ++ " " ++ r.hobby)
+        print(Query.join(.theta(r.age > 20 && r.hobby != nil),
+                         .selection(r.age > 18, .just(r)),
+                         .join(.natural,
+                               .projection(["age", "name" <- 2 + 4, "description" <- r.name ++ " " ++ r.hobby], .just(r)),
+                               .rename("years", "age", .just(s)))))
     }
     
     func testProjection() {

@@ -42,6 +42,17 @@ extension Attribute: CustomDebugStringConvertible {
 
 // MARK: Expressions
 
+extension AnyExpression: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case let .member(exp):  return exp.debugDescription
+        case let .boolean(exp): return exp.debugDescription
+        case let .numeric(exp): return exp.debugDescription
+        case let .string(exp):  return exp.debugDescription
+        }
+    }
+}
+
 extension MemberExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
@@ -125,6 +136,15 @@ extension Query.SortingOrder: CustomDebugStringConvertible {
     }
 }
 
+extension Query.ProjectionArgument: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        guard let expression = expression else {
+            return attribute
+        }
+        return "\(attribute) ← \(expression)"
+    }
+}
+
 extension Query: CustomDebugStringConvertible {
     private func description(_ relNum: (Relation) -> Int) -> String {
         switch self {
@@ -133,8 +153,7 @@ extension Query: CustomDebugStringConvertible {
             let numberDescription = number > 0 ? "\(number)" : ""
             return "R\(numberDescription)"
         case let .projection(args, query):
-            return "π TODO: ( \(query.description(relNum)) )"
-//            return "π \(attributes.joined(separator: ", ")) ( \(query.description(relNum)) )"
+            return "π \(args.map(\.debugDescription).joined(separator: ", ")) ( \(query.description(relNum)) )"
         case let .selection(predicate, query):
             return "σ \(predicate) ( \(query.description(relNum)) )"
         case let .rename(to, from, query):
