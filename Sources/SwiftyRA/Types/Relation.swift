@@ -52,6 +52,11 @@ public struct Relation {
         atr(member)
     }
 
+    // TODO: this is even worse, but let's see where it will lead us
+    public subscript(dynamicMember member: AttributeName) -> AnyExpression {
+        .member(atr(member))
+    }
+
     /// Preserves header attributes order.
     /// Duplicated attributes will cause error.
     /// Values' order in Tuple should correspond to Header Attributes order, otherwise Tuple will be treated as invalid.
@@ -100,8 +105,12 @@ public extension Relation {
         }
     }
 
-    func project(_ arguments: Query.ProjectionArgument...) -> Relation {
+    func project(_ arguments: [Query.ProjectionArgument]) -> Relation {
         withUnaryQuery { q in .projection(arguments, q) }
+    }
+
+    func project(_ arguments: Query.ProjectionArgument...) -> Relation {
+        project(arguments)
     }
 
     func select(where predicate: BooleanExpression) -> Relation {
@@ -154,6 +163,10 @@ public extension Relation {
 }
 
 public extension Relation {
+    var project: Projection {
+        Projection(relation: self)
+    }
+
     var select: Selection {
         Selection(relation: self)
     }
