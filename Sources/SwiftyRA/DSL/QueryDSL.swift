@@ -38,7 +38,9 @@ extension Query.ProjectionArgument: ExpressibleByStringLiteral  {
 
 infix operator <-: AssignmentPrecedence
 
-public func <- (_ lhs: AttributeName, _ rhs: MemberExpression)  -> Query.ProjectionArgument { .init(attribute: lhs, expression: .member(rhs)) }
-public func <- (_ lhs: AttributeName, _ rhs: BooleanExpression) -> Query.ProjectionArgument { .init(attribute: lhs, expression: .boolean(rhs)) }
-public func <- (_ lhs: AttributeName, _ rhs: NumericExpression) -> Query.ProjectionArgument { .init(attribute: lhs, expression: .numeric(rhs)) }
-public func <- (_ lhs: AttributeName, _ rhs: StringExpression)  -> Query.ProjectionArgument { .init(attribute: lhs, expression: .string(rhs)) }
+public func <- (_ lhs: AttributeName, _ rhs: Expression) -> Query.ProjectionArgument { .init(attribute: lhs, expression: rhs) }
+
+public func <- (_ lhs: AttributeName, _ rhs: MemberExpression)  -> Query.ProjectionArgument { lhs <- (rhs as Expression) }
+public func <- (_ lhs: AttributeName, _ rhs: BooleanExpression) -> Query.ProjectionArgument { lhs <- (rhs as Expression) }
+public func <- (_ lhs: AttributeName, _ rhs: NumericExpression) -> Query.ProjectionArgument { lhs <- (rhs as Expression) }
+public func <- (_ lhs: AttributeName, _ rhs: StringExpression)  -> Query.ProjectionArgument { lhs <- (rhs as Expression) }

@@ -12,7 +12,7 @@
 ///     .relation(s)
 /// )
 /// ```
-public indirect enum Query: Hashable {
+public indirect enum Query {
     case just(Relation)
 
     case projection(ProjectionArguments, Query)
@@ -61,26 +61,26 @@ extension Query {
 extension Query {
     public typealias ProjectionArguments = [ProjectionArgument]
 
-    public struct ProjectionArgument: Hashable {
+    public struct ProjectionArgument {
         public let attribute: AttributeName
-        public let expression: AnyExpression?
+        public let expression: Expression?
 
-        public init(attribute: AttributeName, expression: AnyExpression? = nil) {
+        public init(attribute: AttributeName, expression: Expression? = nil) {
             self.attribute = attribute
             self.expression = expression
         }
     }
 }
 
-//extension Query.ProjectionArgument: Equatable {
+// TODO: still thinking about it... doesn't feel right
+//
+//extension Query.ProjectionArgument: Hashable {
 //    /// We don't care about expression if attributes are duplicated.
 //    /// Thus uniqueness is defined by attributes only, which an be treated as a key, whereas expression is a value.
 //    public static func == (_ lhs: Query.ProjectionArgument, _ rhs: Query.ProjectionArgument) -> Bool {
 //        lhs.attribute == rhs.attribute
 //    }
-//}
 //
-//extension Query.ProjectionArgument: Hashable {
 //    public func hash(into hasher: inout Hasher) {
 //        attribute.hash(into: &hasher)
 //    }

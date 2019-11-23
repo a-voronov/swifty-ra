@@ -1,41 +1,11 @@
 // MARK: - Expression
 
-//// TODO: Expression protocol which is Hashable = pain
-//public protocol Expression: Hashable {
-//    var attributes: Set<AttributeName> { get }
-//
-//    func execute(with context: ExpressionContext) -> Throws<Value>
-//}
-//
-//public struct AnyExpression: Expression, Hashable {
-//    public static func == (lhs: AnyExpression, rhs: AnyExpression) -> Bool {
-//        lhs._eq(rhs)
-//    }
-//
-//    public func hash(into hasher: inout Hasher) {
-//        _hash(&hasher)
-//    }
-//
-//    private let _attributes: () -> Set<AttributeName>
-//    private let _execute: (ExpressionContext) -> Throws<Value>
-//    private let _eq: (AnyExpression) -> Bool
-//    private let _hash: (inout Hasher) -> Void
-//
-//    public var attributes: Set<AttributeName> {
-//        _attributes()
-//    }
-//
-//    public func execute(with context: ExpressionContext) -> Throws<Value> {
-//        _execute(context)
-//    }
-//
-//    init<E: Expression>(expression: E) {
-//        _attributes = { expression.attributes }
-//        _execute = expression.execute
-//        _eq = { expression == $0 }
-//        _hash = expression.hash
-//    }
-//}
+public protocol Expression {
+    var attributes: Set<AttributeName> { get }
+
+    func execute(with context: ExpressionContext) -> Throws<Value>
+}
+
 
 // MARK: Context
 
@@ -60,31 +30,9 @@ public struct ExpressionContext: Hashable {
     }
 }
 
-// MARK: - Any
-
-extension AnyExpression {
-    public var attributes: Set<AttributeName> {
-        switch self {
-        case let .member(exp):  return exp.attributes
-        case let .boolean(exp): return exp.attributes
-        case let .numeric(exp): return exp.attributes
-        case let .string(exp):  return exp.attributes
-        }
-    }
-
-    public func execute(with context: ExpressionContext) -> Throws<Value> {
-        switch self {
-        case let .member(exp):  return exp.execute(with: context)
-        case let .boolean(exp): return exp.execute(with: context)
-        case let .numeric(exp): return exp.execute(with: context)
-        case let .string(exp):  return exp.execute(with: context)
-        }
-    }
-}
-
 // MARK: - Member
 
-extension MemberExpression {
+extension MemberExpression: Expression {
     public var attributes: Set<AttributeName> {
         switch self {
         case let .atr(a): return [a]
@@ -102,7 +50,7 @@ extension MemberExpression {
 
 // MARK: Boolean
 
-extension BooleanExpression {
+extension BooleanExpression: Expression {
     public var attributes: Set<AttributeName> {
         switch self {
         case let .just(member):  return member.attributes
@@ -188,7 +136,7 @@ extension BooleanExpression.Operands {
 
 // MARK: Numeric
 
-extension NumericExpression {
+extension NumericExpression: Expression {
     public var attributes: Set<AttributeName> {
         switch self {
         case let .just(member):  return member.attributes
@@ -229,7 +177,7 @@ extension NumericExpression {
 
 // MARK: String
 
-extension StringExpression {
+extension StringExpression: Expression {
     public var attributes: Set<AttributeName> {
         switch self {
         case let .just(member):     return member.attributes

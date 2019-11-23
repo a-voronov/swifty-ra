@@ -53,12 +53,3 @@ public indirect enum StringExpression: Hashable {
     case upper(StringExpression)
     case concat(StringExpression, StringExpression)
 }
-
-// MARK: Any
-
-public enum AnyExpression: Hashable {
-    case member(MemberExpression)
-    case boolean(BooleanExpression)
-    case numeric(NumericExpression)
-    case string(StringExpression)
-}

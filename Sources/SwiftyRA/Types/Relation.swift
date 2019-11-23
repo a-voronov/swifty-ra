@@ -14,7 +14,7 @@ public struct Relation {
         }
     }
 
-    private enum InnerState: Hashable {
+    private enum InnerState {
         case resolved(Header, Tuples)
         case unresolved(Query)
 
@@ -50,11 +50,6 @@ public struct Relation {
     // TODO: not yet sure if it's a good idea, but definitely looks nice with expressions :)
     public subscript(dynamicMember member: AttributeName) -> MemberExpression {
         atr(member)
-    }
-
-    // TODO: this is even worse, but let's see where it will lead us
-    public subscript(dynamicMember member: AttributeName) -> AnyExpression {
-        .member(atr(member))
     }
 
     /// Preserves header attributes order.

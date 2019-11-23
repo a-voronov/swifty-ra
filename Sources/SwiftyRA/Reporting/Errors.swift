@@ -11,24 +11,8 @@ public extension Value {
 
 // MARK: Expression
 
-extension AnyExpression {
-    public typealias Throws<T> = Result<T, ExpressionErrors>
-}
-
-extension MemberExpression {
-    public typealias Throws<T> = Result<T, ExpressionErrors>
-}
-
-extension BooleanExpression {
-    public typealias Throws<T> = Result<T, ExpressionErrors>
-}
-
-extension NumericExpression {
-    public typealias Throws<T> = Result<T, ExpressionErrors>
-}
-
-extension StringExpression {
-    public typealias Throws<T> = Result<T, ExpressionErrors>
+public extension Expression {
+    typealias Throws<T> = Result<T, ExpressionErrors>
 }
 
 public enum ExpressionErrors: Error, Hashable {

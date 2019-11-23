@@ -37,7 +37,7 @@ public extension Query {
             var attributeTypes: [AttributeName: AttributeType] = [:]
             // Checking for duplicates
             var duplicates: Set<AttributeName> = []
-            let expressions: [AttributeName: AnyExpression] = arguments.reduce(into: [:]) { acc, arg in
+            let expressions: [AttributeName: Expression] = arguments.reduce(into: [:]) { acc, arg in
                 guard acc[arg.attribute] == nil else {
                     duplicates.insert(arg.attribute)
                     return
@@ -45,7 +45,7 @@ public extension Query {
                 if let expression = arg.expression {
                     acc[arg.attribute] = expression
                 } else {
-                    acc[arg.attribute] = .member(.atr(arg.attribute))
+                    acc[arg.attribute] = atr(arg.attribute)
                     attributeTypes[arg.attribute] = s.header[arg.attribute]?.type
                 }
             }
@@ -65,7 +65,7 @@ public extension Query {
                 return .failure(.query(.unknownAttributes(errs)))
             }
             // Constructing new tuples and inferring scheme type
-            let tuples = s.tuples.map { tuple -> AnyExpression.Throws<Tuple> in
+            let tuples = s.tuples.map { tuple -> Result<Tuple, ExpressionErrors> in
                 let ctx = ExpressionContext(values: tuple.values)
                 var values: [AttributeName: Value] = [:]
 

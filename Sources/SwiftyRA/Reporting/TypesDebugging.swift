@@ -42,17 +42,6 @@ extension Attribute: CustomDebugStringConvertible {
 
 // MARK: Expressions
 
-extension AnyExpression: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        switch self {
-        case let .member(exp):  return exp.debugDescription
-        case let .boolean(exp): return exp.debugDescription
-        case let .numeric(exp): return exp.debugDescription
-        case let .string(exp):  return exp.debugDescription
-        }
-    }
-}
-
 extension MemberExpression: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
