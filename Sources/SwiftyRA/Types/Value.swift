@@ -21,7 +21,7 @@ extension Value: ExpressibleByIntegerLiteral { public init(integerLiteral value:
 extension Value: ExpressibleByFloatLiteral   { public init(floatLiteral value: Float)   { self = .float(value)   } }
 extension Value: ExpressibleByNilLiteral     { public init(nilLiteral: ())              { self = .none           } }
 
-// MARK: Helper Getters
+// MARK: Unboxed Values
 
 public extension Value {
     var hasValue: Bool {
@@ -49,23 +49,31 @@ public extension Value {
     }
 }
 
+// MARK: Unboxed Value or None
+
+public typealias ValueOrNone = Optional
+
+public extension Value {
+    var booleanValue: ValueOrNone<Bool>?  { valueOrNone(\.boolean) }
+    var stringValue: ValueOrNone<String>? { valueOrNone(\.string)  }
+    var integerValue: ValueOrNone<Int>?   { valueOrNone(\.integer) }
+    var floatValue: ValueOrNone<Float>?   { valueOrNone(\.float)   }
+
+    private func valueOrNone<T>(_ keyPath: KeyPath<Value, T?>) -> ValueOrNone<T>? {
+        hasValue ? self[keyPath: keyPath] : .some(.none)
+    }
+}
+
 // MARK: Casting
 
 public extension Value {
-    var asBoolean: Throws<Bool> {
-        Throws(value: boolean, error: .mismatch(.one(self), .one(.boolean)))
-    }
+    var asBoolean: Throws<Bool>  { castValue(\.boolean, expectedType: .boolean) }
+    var asString: Throws<String> { castValue(\.string,  expectedType: .string)  }
+    var asInteger: Throws<Int>   { castValue(\.integer, expectedType: .integer) }
+    var asFloat: Throws<Float>   { castValue(\.float,   expectedType: .float)   }
 
-    var asString: Throws<String> {
-        Throws(value: string, error: .mismatch(.one(self), .one(.string)))
-    }
-
-    var asInteger: Throws<Int> {
-        Throws(value: integer, error: .mismatch(.one(self), .one(.integer)))
-    }
-
-    var asFloat: Throws<Float> {
-        Throws(value: float, error: .mismatch(.one(self), .one(.float)))
+    private func castValue<T>(_ keyPath: KeyPath<Value, T?>, expectedType: ValueType) -> Throws<T> {
+        Throws(value: self[keyPath: keyPath], error: .mismatch(.one(self), .one(expectedType)))
     }
 }
 

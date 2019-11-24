@@ -42,12 +42,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let s = r
-            .project("id", "name", "hobbies" <- r.hobby)
-            .project("id", "name")
-
-        // TODO: wait for operations with nil to return nil and check
-//         let s = r.project("identifier" <- r.id, "name", "description" <- r.name ++ ": " ++ r.hobby)
+        let s = r.project("identifier" <- r.id, "name", "description" <- r.name ++ ": " ++ r.hobby)
 
         print(s)
     }
@@ -61,12 +56,7 @@ final class SwiftyRATests: XCTestCase {
                 [3, "Carol", 19]
             ]
         )
-        let s = r
-            .project(r.id, r.name, hobbies: r.hobby)
-//            .project(r.id, r.name) // Errors with 'Abort trap: 6'
-
-//        // TODO: wait for operations with nil to return nil and check
-//        // let s = r.project(identifier: r.id, r.name, description: r.name ++ ": " ++ r.hobby)
+        let s = r.project(identifier: r.id, r.name, description: r.name ++ ": " ++ r.hobby)
 
         print(s)
     }

@@ -163,8 +163,8 @@ public extension Query {
                     }
 
                     switch order {
-                    case .asc:  return l < r
-                    case .desc: return l > r
+                    case .asc:  return (l < r).flatMap(\.asBoolean)
+                    case .desc: return (l > r).flatMap(\.asBoolean)
                     }
                 }
                 return .success(false)

@@ -1,23 +1,27 @@
 public extension Value {
-    private static func boolean(_ lhs: Value, _ rhs: Value, _ op: (Bool, Bool) -> Bool) -> Throws<Bool> {
+    static func && (lhs: Value, rhs: Value) -> Throws<Value> {
+        binary(lhs: lhs, rhs: rhs) { $0 && $1 }
+    }
+
+    static func || (lhs: Value, rhs: Value) -> Throws<Value> {
+        binary(lhs: lhs, rhs: rhs) { $0 || $1 }
+    }
+
+    static prefix func ! (a: Value) -> Throws<Value> {
+        a.unary(transform: !)
+    }
+
+    private func unary(transform: (Bool) -> Bool) -> Throws<Value> {
         Throws(
-            value: zip(lhs.boolean, rhs.boolean).map(op),
-            error: .mismatch(.few(lhs, rhs), .one(.boolean))
+            value: booleanValue.map { $0.map(transform).map(Value.boolean) ?? .none },
+            error: .mismatch(.one(self), .one(.boolean))
         )
     }
 
-    static func && (lhs: Value, rhs: Value) -> Throws<Bool> {
-        boolean(lhs, rhs) { $0 && $1 }
-    }
-
-    static func || (lhs: Value, rhs: Value) -> Throws<Bool> {
-        boolean(lhs, rhs) { $0 || $1 }
-    }
-
-    static prefix func ! (a: Value) -> Throws<Bool> {
+    private static func binary(lhs: Value, rhs: Value, transform: (Bool, Bool) -> Bool) -> Throws<Value> {
         Throws(
-            value: a.boolean.map(!),
-            error: .mismatch(.one(a), .one(.boolean))
+            value: zip(lhs.booleanValue, rhs.booleanValue).map { l, r in zip(l, r).map(transform).map(Value.boolean) ?? .none },
+            error: .mismatch(.few(lhs, rhs), .one(.boolean))
         )
     }
 }

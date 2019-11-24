@@ -91,26 +91,26 @@ extension BooleanExpression: Expression {
     private func applyUnary(
         _ exp: BooleanExpression,
         _ ctx: ExpressionContext,
-        _ op: @escaping (Value) -> Value.Throws<Bool>
+        _ op: @escaping (Value) -> Value.Throws<Value>
     ) -> Throws<Value> {
-        exp.execute(with: ctx).flatMap(apply(op)).map(Value.boolean)
+        exp.execute(with: ctx).flatMap(apply(op))
     }
 
     private func applyBinary(
         _ lhs: BooleanExpression,
         _ rhs: BooleanExpression,
         _ ctx: ExpressionContext,
-        _ op: @escaping (Value, Value) -> Value.Throws<Bool>
+        _ op: @escaping (Value, Value) -> Value.Throws<Value>
     ) -> Throws<Value> {
-        zip(lhs.execute(with: ctx), rhs.execute(with: ctx)).flatMap(apply(op)).map(Value.boolean)
+        zip(lhs.execute(with: ctx), rhs.execute(with: ctx)).flatMap(apply(op))
     }
 
     private func applyOperands(
         _ ops: BooleanExpression.Operands,
         _ ctx: ExpressionContext,
-        _ op: @escaping (Value, Value) -> Value.Throws<Bool>
+        _ op: @escaping (Value, Value) -> Value.Throws<Value>
     ) -> Throws<Value> {
-        ops.execute(with: ctx).flatMap(apply(op)).map(Value.boolean)
+        ops.execute(with: ctx).flatMap(apply(op))//.map(Value.boolean)
     }
 }
 

@@ -7,7 +7,7 @@ extension Value: CustomDebugStringConvertible {
         case let .string(value):  return "\"\(value)\""
         case let .integer(value): return "\(value)"
         case let .float(value):   return "\(value)"
-        case .none: return "nil"
+        case .none: return "ω"
         }
     }
 }
