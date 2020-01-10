@@ -1,6 +1,9 @@
 # Swifty RA ☀️
 
-Relational Algebra in Swift.
+Relational Algebra* in Swift.
+
+This is just a pet project to see how two worlds of dynamic data representation and strong type system can be combined together using Swift. And a playground to try out different Swift tools to build embeded DSLs.
+This project is not intended for any production usage, at least for now.
 
 ## TODO
 - provide verbose errors & user-friendly description (especially if complex query processing fails)
@@ -11,4 +14,5 @@ Relational Algebra in Swift.
 - think of foreign keys
 - optimize query tree
 - serialize/deserialize to/from Relation
-- think of DSL
+
+*there is a notion of non-required value which means it can be NULL, whereas Relational Algebra doesn't support such.
